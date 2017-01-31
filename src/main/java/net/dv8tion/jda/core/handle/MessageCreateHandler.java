@@ -16,7 +16,10 @@
 package net.dv8tion.jda.core.handle;
 
 import net.dv8tion.jda.client.events.message.group.GroupMessageReceivedEvent;
-import net.dv8tion.jda.core.entities.*;
+import net.dv8tion.jda.core.entities.EntityBuilder;
+import net.dv8tion.jda.core.entities.Message;
+import net.dv8tion.jda.core.entities.MessageType;
+import net.dv8tion.jda.core.entities.TextChannel;
 import net.dv8tion.jda.core.entities.impl.JDAImpl;
 import net.dv8tion.jda.core.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.core.events.message.guild.GuildMessageReceivedEvent;
@@ -25,11 +28,9 @@ import net.dv8tion.jda.core.requests.GuildLock;
 import net.dv8tion.jda.core.requests.WebSocketClient;
 import org.json.JSONObject;
 
-import java.util.regex.Pattern;
-
 public class MessageCreateHandler extends SocketHandler
 {
-    private static final Pattern invitePattern = Pattern.compile("\\bhttps://(?:www\\.)?discord(?:\\.gg|app\\.com/invite)/([a-zA-Z0-9-]+)\\b");
+    //private static final Pattern invitePattern = Pattern.compile("\\bhttps://(?:www\\.)?discord(?:\\.gg|app\\.com/invite)/([a-zA-Z0-9-]+)\\b");
 
     public MessageCreateHandler(JDAImpl api)
     {
@@ -37,7 +38,7 @@ public class MessageCreateHandler extends SocketHandler
     }
 
     @Override
-    protected String handleInternally(JSONObject content)
+    protected Long handleInternally(JSONObject content)
     {
         MessageType type = MessageType.fromId(content.getInt("type"));
 
@@ -51,7 +52,7 @@ public class MessageCreateHandler extends SocketHandler
         return null;
     }
 
-    private String handleDefaultMessage(JSONObject content)
+    private Long handleDefaultMessage(JSONObject content)
     {
         Message message;
         try
@@ -64,19 +65,15 @@ public class MessageCreateHandler extends SocketHandler
             {
                 case EntityBuilder.MISSING_CHANNEL:
                 {
-                    EventCache.get(api).cache(EventCache.Type.CHANNEL, content.getString("channel_id"), () ->
-                    {
-                        handle(responseNumber, allContent);
-                    });
+                    final long channelId = Long.parseLong(content.getString("channel_id"));
+                    EventCache.get(api).cache(EventCache.Type.CHANNEL, channelId, () -> handle(responseNumber, allContent));
                     EventCache.LOG.debug("Received a message for a channel that JDA does not currently have cached");
                     return null;
                 }
                 case EntityBuilder.MISSING_USER:
                 {
-                    EventCache.get(api).cache(EventCache.Type.USER, content.getJSONObject("author").getString("id"), () ->
-                    {
-                        handle(responseNumber, allContent);
-                    });
+                    final long authorId = Long.parseLong(content.getJSONObject("author").getString("id"));
+                    EventCache.get(api).cache(EventCache.Type.USER, authorId, () -> handle(responseNumber, allContent));
                     EventCache.LOG.debug("Received a message for a user that JDA does not currently have cached");
                     return null;
                 }
@@ -90,9 +87,9 @@ public class MessageCreateHandler extends SocketHandler
             case TEXT:
             {
                 TextChannel channel = message.getTextChannel();
-                if (GuildLock.get(api).isLocked(channel.getGuild().getId()))
+                if (GuildLock.get(api).isLocked(channel.getGuild().getIdLong()))
                 {
-                    return channel.getGuild().getId();
+                    return channel.getGuild().getIdLong();
                 }
                 api.getEventManager().handle(
                         new GuildMessageReceivedEvent(

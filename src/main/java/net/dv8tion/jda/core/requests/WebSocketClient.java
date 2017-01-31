@@ -16,9 +16,21 @@
 
 package net.dv8tion.jda.core.requests;
 
-import com.neovisionaries.ws.client.*;
+import com.neovisionaries.ws.client.ProxySettings;
+import com.neovisionaries.ws.client.WebSocket;
+import com.neovisionaries.ws.client.WebSocketAdapter;
+import com.neovisionaries.ws.client.WebSocketException;
+import com.neovisionaries.ws.client.WebSocketFactory;
+import com.neovisionaries.ws.client.WebSocketFrame;
+import com.neovisionaries.ws.client.WebSocketListener;
 import net.dv8tion.jda.client.entities.impl.JDAClientImpl;
-import net.dv8tion.jda.client.handle.*;
+import net.dv8tion.jda.client.handle.CallCreateHandler;
+import net.dv8tion.jda.client.handle.CallDeleteHandler;
+import net.dv8tion.jda.client.handle.CallUpdateHandler;
+import net.dv8tion.jda.client.handle.ChannelRecipientAddHandler;
+import net.dv8tion.jda.client.handle.ChannelRecipientRemoveHandler;
+import net.dv8tion.jda.client.handle.RelationshipAddHandler;
+import net.dv8tion.jda.client.handle.RelationshipRemoveHandler;
 import net.dv8tion.jda.core.AccountType;
 import net.dv8tion.jda.core.JDA;
 import net.dv8tion.jda.core.Permission;
@@ -28,7 +40,11 @@ import net.dv8tion.jda.core.entities.EntityBuilder;
 import net.dv8tion.jda.core.entities.Guild;
 import net.dv8tion.jda.core.entities.VoiceChannel;
 import net.dv8tion.jda.core.entities.impl.JDAImpl;
-import net.dv8tion.jda.core.events.*;
+import net.dv8tion.jda.core.events.DisconnectEvent;
+import net.dv8tion.jda.core.events.ReadyEvent;
+import net.dv8tion.jda.core.events.ReconnectedEvent;
+import net.dv8tion.jda.core.events.ResumedEvent;
+import net.dv8tion.jda.core.events.ShutdownEvent;
 import net.dv8tion.jda.core.handle.*;
 import net.dv8tion.jda.core.managers.AudioManager;
 import net.dv8tion.jda.core.managers.impl.AudioManagerImpl;
@@ -43,7 +59,12 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
@@ -73,7 +94,7 @@ public class WebSocketClient extends WebSocketAdapter implements WebSocketListen
     protected int reconnectTimeoutS = 2;
 
     //GuildId, <TimeOfNextAttempt, AudioConnection>
-    protected final HashMap<String, MutablePair<Long, VoiceChannel>> queuedAudioConnections = new HashMap<>();
+    protected final HashMap<Long, MutablePair<Long, VoiceChannel>> queuedAudioConnections = new HashMap<>();
 
     protected final LinkedList<String> ratelimitQueue = new LinkedList<>();
     protected volatile Thread ratelimitThread = null;
@@ -237,7 +258,7 @@ public class WebSocketClient extends WebSocketAdapter implements WebSocketListen
                                 // that event just for a move, so we remove it here after successfully sending.
                                 if (audioManager.isConnected())
                                 {
-                                    queuedAudioConnections.remove(channel.getGuild().getId());
+                                    queuedAudioConnections.remove(channel.getGuild().getIdLong());
                                 }
                             }
                             attemptedToSend = true;
@@ -338,7 +359,7 @@ public class WebSocketClient extends WebSocketAdapter implements WebSocketListen
                 }
             };
 
-            return gateway.block() + "?encoding=json&v=" + DISCORD_GATEWAY_VERSION;
+            return gateway.complete() + "?encoding=json&v=" + DISCORD_GATEWAY_VERSION;
         }
         catch (Exception ex)
         {
@@ -577,7 +598,7 @@ public class WebSocketClient extends WebSocketAdapter implements WebSocketListen
 
         api.getAudioManagerMap().entrySet().forEach(entry ->
         {
-            String guildId = entry.getKey();
+            final long guildId = entry.getKey();
             AudioManager mng = entry.getValue();
             ConnectionListener listener = mng.getConnectionListener();
 
@@ -633,9 +654,9 @@ public class WebSocketClient extends WebSocketAdapter implements WebSocketListen
         long responseTotal = api.getResponseTotal();
 
         if (type.equals("GUILD_MEMBER_ADD"))
-            ((GuildMembersChunkHandler) getHandler("GUILD_MEMBERS_CHUNK")).modifyExpectedGuildMember(raw.getJSONObject("d").getString("guild_id"), 1);
+            ((GuildMembersChunkHandler) getHandler("GUILD_MEMBERS_CHUNK")).modifyExpectedGuildMember(Long.parseLong(raw.getJSONObject("d").getString("guild_id")), 1);
         if (type.equals("GUILD_MEMBER_REMOVE"))
-            ((GuildMembersChunkHandler) getHandler("GUILD_MEMBERS_CHUNK")).modifyExpectedGuildMember(raw.getJSONObject("d").getString("guild_id"), -1);
+            ((GuildMembersChunkHandler) getHandler("GUILD_MEMBERS_CHUNK")).modifyExpectedGuildMember(Long.parseLong(raw.getJSONObject("d").getString("guild_id")), -1);
 
         //If initiating, only allows READY, RESUMED, GUILD_MEMBERS_CHUNK, GUILD_SYNC, and GUILD_CREATE through.
         // If we are currently chunking, we don't allow GUILD_CREATE through anymore.
@@ -740,10 +761,10 @@ public class WebSocketClient extends WebSocketAdapter implements WebSocketListen
 
     public void queueAudioConnect(VoiceChannel channel)
     {
-        queuedAudioConnections.put(channel.getGuild().getId(), new MutablePair<>(System.currentTimeMillis(), channel));
+        queuedAudioConnections.put(channel.getGuild().getIdLong(), new MutablePair<>(System.currentTimeMillis(), channel));
     }
 
-    public HashMap<String, MutablePair<Long, VoiceChannel>> getQueuedAudioConnectionMap()
+    public HashMap<Long, MutablePair<Long, VoiceChannel>> getQueuedAudioConnectionMap()
     {
         return queuedAudioConnections;
     }
@@ -857,7 +878,7 @@ public class WebSocketClient extends WebSocketAdapter implements WebSocketListen
             handlers.put("MESSAGE_ACK", new SocketHandler(api)
             {
                 @Override
-                protected String handleInternally(JSONObject content)
+                protected Long handleInternally(JSONObject content)
                 {
                     return null;
                 }

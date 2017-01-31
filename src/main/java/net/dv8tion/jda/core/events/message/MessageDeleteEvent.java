@@ -17,7 +17,11 @@ package net.dv8tion.jda.core.events.message;
 
 import net.dv8tion.jda.client.entities.Group;
 import net.dv8tion.jda.core.JDA;
-import net.dv8tion.jda.core.entities.*;
+import net.dv8tion.jda.core.entities.ChannelType;
+import net.dv8tion.jda.core.entities.Guild;
+import net.dv8tion.jda.core.entities.MessageChannel;
+import net.dv8tion.jda.core.entities.PrivateChannel;
+import net.dv8tion.jda.core.entities.TextChannel;
 import net.dv8tion.jda.core.events.Event;
 
 /**
@@ -58,7 +62,7 @@ public class MessageDeleteEvent extends Event
         return channel;
     }
 
-    public PrivateChannel getPrivatechannel()
+    public PrivateChannel getPrivateChannel()
     {
         return isFromType(ChannelType.PRIVATE) ? (PrivateChannel) channel : null;
     }

@@ -21,16 +21,22 @@ import com.mashape.unirest.request.body.MultipartBody;
 import net.dv8tion.jda.client.entities.Call;
 import net.dv8tion.jda.client.entities.Friend;
 import net.dv8tion.jda.client.entities.Group;
+import net.dv8tion.jda.client.entities.Relationship;
 import net.dv8tion.jda.core.JDA;
 import net.dv8tion.jda.core.MessageBuilder;
-import net.dv8tion.jda.core.entities.MessageHistory;
 import net.dv8tion.jda.core.entities.ChannelType;
 import net.dv8tion.jda.core.entities.EntityBuilder;
 import net.dv8tion.jda.core.entities.Message;
+import net.dv8tion.jda.core.entities.MessageEmbed;
+import net.dv8tion.jda.core.entities.MessageHistory;
 import net.dv8tion.jda.core.entities.User;
 import net.dv8tion.jda.core.entities.impl.JDAImpl;
 import net.dv8tion.jda.core.entities.impl.MessageImpl;
-import net.dv8tion.jda.core.requests.*;
+import net.dv8tion.jda.core.requests.Request;
+import net.dv8tion.jda.core.requests.Requester;
+import net.dv8tion.jda.core.requests.Response;
+import net.dv8tion.jda.core.requests.RestAction;
+import net.dv8tion.jda.core.requests.Route;
 import net.dv8tion.jda.core.utils.IOUtil;
 import org.apache.http.util.Args;
 import org.json.JSONArray;
@@ -39,22 +45,25 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.*;
-import net.dv8tion.jda.core.entities.MessageEmbed;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 
 public class GroupImpl implements Group
 {
-    private final String id;
+    private final long id;
     private final JDAImpl api;
 
-    private HashMap<String, User> userMap = new HashMap<>();
+    private HashMap<Long, User> userMap = new HashMap<>();
 
     private Call currentCall;
     private User owner;
     private String name;
     private String iconId;
 
-    public GroupImpl(String id, JDAImpl api)
+    public GroupImpl(long id, JDAImpl api)
     {
         this.id = id;
         this.api = api;
@@ -102,9 +111,11 @@ public class GroupImpl implements Group
     public List<User> getNonFriendUsers()
     {
         List<User> nonFriends = new ArrayList<>();
+        HashMap<Long, Relationship> map = ((JDAClientImpl) api.asClient()).getRelationshipMap();
         userMap.forEach((userId, user) ->
         {
-            Friend friend = api.asClient().getFriendById(userId);
+            Relationship relationship = map.get(userId);
+            Friend friend = relationship instanceof Friend ? (Friend) relationship : null;
             if (friend == null)
                 nonFriends.add(user);
         });
@@ -115,9 +126,11 @@ public class GroupImpl implements Group
     public List<Friend> getFriends()
     {
         List<Friend> friends = new ArrayList<>();
-        for (String userId : userMap.keySet())
+        HashMap<Long, Relationship> map = ((JDAClientImpl) api.asClient()).getRelationshipMap();
+        for (long userId : userMap.keySet())
         {
-            Friend friend = api.asClient().getFriendById(userId);
+            Relationship relationship = map.get(userId);
+            Friend friend = relationship instanceof Friend ? (Friend) relationship : null;
             if (friend != null)
                 friends.add(friend);
         }
@@ -140,12 +153,6 @@ public class GroupImpl implements Group
     public RestAction leaveGroup()
     {
         return null;
-    }
-
-    @Override
-    public String getId()
-    {
-        return id;
     }
 
     @Override
@@ -217,7 +224,7 @@ public class GroupImpl implements Group
         checkNull(data, "data InputStream");
         checkNull(fileName, "fileName");
 
-        Route.CompiledRoute route = Route.Messages.SEND_MESSAGE.compile(id);
+        Route.CompiledRoute route = Route.Messages.SEND_MESSAGE.compile(getId());
         MultipartBody body = Unirest.post(Requester.DISCORD_API_PREFIX + route.getCompiledRoute())
                 .fields(null); //We use this to change from an HttpRequest to a MultipartBody
 
@@ -250,7 +257,7 @@ public class GroupImpl implements Group
         if (data.length > 8<<20)   //8MB
             throw new IllegalArgumentException("Provided data is too large! Max file-size is 8MB");
 
-        Route.CompiledRoute route = Route.Messages.SEND_MESSAGE.compile(id);
+        Route.CompiledRoute route = Route.Messages.SEND_MESSAGE.compile(getId());
         MultipartBody body = Unirest.post(Requester.DISCORD_API_PREFIX + route.getCompiledRoute())
                 .fields(null); //We use this to change from an HttpRequest to a MultipartBody
 
@@ -327,7 +334,7 @@ public class GroupImpl implements Group
     @Override
     public RestAction<Void> sendTyping()
     {
-        Route.CompiledRoute route = Route.Channels.SEND_TYPING.compile(id);
+        Route.CompiledRoute route = Route.Channels.SEND_TYPING.compile(getId());
         return new RestAction<Void>(getJDA(), route, null)
         {
             @Override
@@ -412,26 +419,26 @@ public class GroupImpl implements Group
     @Override
     public String toString()
     {
-        return String.format("G:%s(%s)", getName(), getId());
+        return String.format("G:%s(%d)", getName(), id);
     }
 
     @Override
     public boolean equals(Object o)
     {
-        if (!(o instanceof Group))
+        if (!(o instanceof GroupImpl))
             return false;
 
-        Group oGroup = (Group) o;
-        return id.equals(oGroup.getId());
+        GroupImpl oGroup = (GroupImpl) o;
+        return id == oGroup.id;
     }
 
     @Override
     public int hashCode()
     {
-        return id.hashCode();
+        return Long.hashCode(id);
     }
 
-    public HashMap<String, User> getUserMap()
+    public HashMap<Long, User> getUserMap()
     {
         return userMap;
     }
@@ -464,5 +471,11 @@ public class GroupImpl implements Group
     {
         if (obj == null)
             throw new NullPointerException("Provided " + name + " was null!");
+    }
+
+    @Override
+    public long getIdLong()
+    {
+        return id;
     }
 }

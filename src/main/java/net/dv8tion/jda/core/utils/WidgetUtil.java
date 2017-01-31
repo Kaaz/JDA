@@ -133,7 +133,35 @@ public class WidgetUtil
         Args.notNegative(height, "Height");
         return String.format(WIDGET_HTML, guildId, theme.name().toLowerCase(), width, height);
     }
-    
+
+    /**
+     * Makes a GET request to get the information for a Guild's widget. This
+     * widget (if available) contains information about the guild, including the
+     * Guild's name, an invite code (if set), a list of voice channels, and a
+     * list of online members (plus the voice states of any members in voice
+     * channels).
+     *
+     * <p>This Widget can be obtained from any valid guild ID that has
+     * it enabled; no accounts need to be on the server to access this information.
+     *
+     * @param  guildId
+     *         The id of the Guild
+     *
+     * @throws net.dv8tion.jda.core.exceptions.RateLimitedException
+     *         If the request was rate limited, <b>respect the timeout</b>!
+     *
+     * @return {@code null} if the provided guild ID is not a valid Discord guild ID
+     *         <br>a Widget object with null fields and isAvailable() returning
+     *         false if the guild ID is valid but the guild in question does not
+     *         have the widget enabled
+     *         <br>a filled-in Widget object if the guild ID is valid and the guild
+     *         in question has the widget enabled.
+     */
+    public static Widget getWidget(String guildId) throws RateLimitedException
+    {
+        return getWidget(Long.parseLong(guildId));
+    }
+
     /**
      * Makes a GET request to get the information for a Guild's widget. This
      * widget (if available) contains information about the guild, including the
@@ -157,7 +185,7 @@ public class WidgetUtil
      *         <br>a filled-in Widget object if the guild ID is valid and the guild
      *         in question has the widget enabled.
      */
-    public static Widget getWidget(String guildId) throws RateLimitedException
+    public static Widget getWidget(long guildId) throws RateLimitedException
     {
         Args.notNull(guildId, "GuildId");
         try
@@ -219,7 +247,7 @@ public class WidgetUtil
     public static class Widget implements ISnowflake
     {
         private final boolean isAvailable;
-        private final String id;
+        private final long id;
         private final String name;
         private final String invite;
         private final HashMap<String, VoiceChannel> channels;
@@ -228,7 +256,7 @@ public class WidgetUtil
         /**
          * Constructs an unavailable Widget
          */
-        private Widget(String guildId)
+        private Widget(long guildId)
         {
             isAvailable = false;
             id = guildId;
@@ -251,7 +279,7 @@ public class WidgetUtil
                 inviteCode = inviteCode.substring(inviteCode.lastIndexOf("/") + 1);
             
             isAvailable = true;
-            id = json.getString("id");
+            id = Long.parseLong(json.getString("id"));
             name = json.getString("name");
             invite = inviteCode;
             channels = new HashMap<>();
@@ -298,7 +326,7 @@ public class WidgetUtil
         }
         
         @Override
-        public String getId()
+        public long getIdLong()
         {
             return id;
         }
@@ -372,7 +400,7 @@ public class WidgetUtil
 
         @Override
         public int hashCode() {
-            return id.hashCode();
+            return Long.hashCode(id);
         }
 
         @Override
@@ -380,13 +408,13 @@ public class WidgetUtil
             if (!(obj instanceof Widget))
                 return false;
             Widget oWidget = (Widget) obj;
-            return this == oWidget || this.id.equals(oWidget.getId());
+            return this == oWidget || this.id == oWidget.getIdLong();
         }
         
         @Override
         public String toString()
         {
-            return "W:" + (isAvailable() ? getName() : "") + '(' + getId() + ')';
+            return "W:" + (isAvailable() ? getName() : "") + '(' + id + ')';
         }
         
         
@@ -394,7 +422,7 @@ public class WidgetUtil
         public static class Member implements ISnowflake, IMentionable
         {
             private final boolean bot;
-            private final String id;
+            private final long id;
             private final String username;
             private final String discriminator;
             private final String avatar;
@@ -408,7 +436,7 @@ public class WidgetUtil
             {
                 this.widget = widget;
                 this.bot = !json.isNull("bot") && json.getBoolean("bot");
-                this.id = json.getString("id");
+                this.id = Long.parseLong(json.getString("id"));
                 this.username = json.getString("username");
                 this.discriminator = json.getString("discriminator");
                 this.avatar = json.isNull("avatar") ? null : json.getString("avatar");
@@ -445,7 +473,7 @@ public class WidgetUtil
             }
             
             @Override
-            public String getId()
+            public long getIdLong()
             {
                 return id;
             }
@@ -601,22 +629,22 @@ public class WidgetUtil
                 if (!(obj instanceof Member))
                     return false;
                 Member oMember = (Member) obj;
-                return this == oMember || (this.id.equals(oMember.getId()) && this.widget.getId().equals(oMember.getWidget().getId()));
+                return this == oMember || (this.id == oMember.getIdLong() && this.widget.getIdLong() == oMember.getWidget().getIdLong());
             }
             
             @Override
             public String toString()
             {
-                return "W.M:" + getName() + '(' + getId() + ')';
+                return "W.M:" + getName() + '(' + id + ')';
             }
             
         }
         
         
-        public static class VoiceChannel
+        public static class VoiceChannel implements ISnowflake
         {
             private final int position;
-            private final String id;
+            private final long id;
             private final String name;
             private final List<Member> members;
             private final Widget widget;
@@ -625,7 +653,7 @@ public class WidgetUtil
             {
                 this.widget = widget;
                 this.position = json.getInt("position");
-                this.id = json.getString("id");
+                this.id = Long.parseLong(json.getString("id"));
                 this.name = json.getString("name");
                 this.members = new ArrayList<>();
             }
@@ -644,13 +672,9 @@ public class WidgetUtil
             {
                 return position;
             }
-            
-            /**
-             * Gets the Discord ID of the channel
-             * 
-             * @return id of the channel
-             */
-            public String getId()
+
+            @Override
+            public long getIdLong()
             {
                 return id;
             }
@@ -687,7 +711,7 @@ public class WidgetUtil
 
             @Override
             public int hashCode() {
-                return id.hashCode();
+                return Long.hashCode(id);
             }
 
             @Override
@@ -695,13 +719,13 @@ public class WidgetUtil
                 if (!(obj instanceof VoiceChannel))
                     return false;
                 VoiceChannel oVChannel = (VoiceChannel) obj;
-                return this == oVChannel || this.id.equals(oVChannel.getId());
+                return this == oVChannel || this.id == oVChannel.getIdLong();
             }
             
             @Override
             public String toString()
             {
-                return "W.VC:" + getName() + '(' + getId() + ')';
+                return "W.VC:" + getName() + '(' + id + ')';
             }
         }
         

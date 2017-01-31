@@ -17,7 +17,6 @@ package net.dv8tion.jda.core.events.message.guild;
 
 import net.dv8tion.jda.core.JDA;
 import net.dv8tion.jda.core.entities.Message;
-import net.dv8tion.jda.core.entities.TextChannel;
 
 /**
  * <b><u>GuildMessageReceivedEvent</u></b><br>

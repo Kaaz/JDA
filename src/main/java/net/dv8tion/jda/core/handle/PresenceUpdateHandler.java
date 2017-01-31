@@ -17,9 +17,15 @@ package net.dv8tion.jda.core.handle;
 
 import net.dv8tion.jda.core.OnlineStatus;
 import net.dv8tion.jda.core.entities.Game;
-import net.dv8tion.jda.core.entities.Guild;
-import net.dv8tion.jda.core.entities.impl.*;
-import net.dv8tion.jda.core.events.user.*;
+import net.dv8tion.jda.core.entities.impl.GameImpl;
+import net.dv8tion.jda.core.entities.impl.GuildImpl;
+import net.dv8tion.jda.core.entities.impl.JDAImpl;
+import net.dv8tion.jda.core.entities.impl.MemberImpl;
+import net.dv8tion.jda.core.entities.impl.UserImpl;
+import net.dv8tion.jda.core.events.user.UserAvatarUpdateEvent;
+import net.dv8tion.jda.core.events.user.UserGameUpdateEvent;
+import net.dv8tion.jda.core.events.user.UserNameUpdateEvent;
+import net.dv8tion.jda.core.events.user.UserOnlineStatusUpdateEvent;
 import net.dv8tion.jda.core.requests.GuildLock;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
@@ -33,16 +39,15 @@ public class PresenceUpdateHandler extends SocketHandler
     }
 
     @Override
-    protected String handleInternally(JSONObject content)
+    protected Long handleInternally(JSONObject content)
     {
         //Do a pre-check to see if this is for a Guild, and if it is, if the guild is currently locked.
-        if (content.has("guild_id") && GuildLock.get(api).isLocked(content.getString("guild_id")))
-        {
-            return content.getString("guild_id");
-        }
+        final long guildId = Long.parseLong(content.getString("guild_id"));
+        if (content.has("guild_id") && GuildLock.get(api).isLocked(guildId))
+            return guildId;
 
         JSONObject jsonUser = content.getJSONObject("user");
-        String userId = jsonUser.getString("id");
+        final long userId = Long.parseLong(jsonUser.getString("id"));
         UserImpl user = (UserImpl) api.getUserMap().get(userId);
 
         //If we do know about the user, lets update the user's specific info.

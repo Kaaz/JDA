@@ -19,8 +19,6 @@ import net.dv8tion.jda.core.entities.EntityBuilder;
 import net.dv8tion.jda.core.entities.Member;
 import net.dv8tion.jda.core.entities.impl.GuildImpl;
 import net.dv8tion.jda.core.entities.impl.JDAImpl;
-import net.dv8tion.jda.core.entities.impl.PrivateChannelImpl;
-import net.dv8tion.jda.core.entities.impl.UserImpl;
 import net.dv8tion.jda.core.events.guild.member.GuildMemberJoinEvent;
 import net.dv8tion.jda.core.requests.GuildLock;
 import org.json.JSONObject;
@@ -34,17 +32,16 @@ public class GuildMemberAddHandler extends SocketHandler
     }
 
     @Override
-    protected String handleInternally(JSONObject content)
+    protected Long handleInternally(JSONObject content)
     {
-        if (GuildLock.get(api).isLocked(content.getString("guild_id")))
-        {
-            return content.getString("guild_id");
-        }
+        final long id = Long.parseLong(content.getString("guild_id"));
+        if (GuildLock.get(api).isLocked(id))
+            return id;
 
-        GuildImpl guild = (GuildImpl) api.getGuildMap().get(content.getString("guild_id"));
+        GuildImpl guild = (GuildImpl) api.getGuildMap().get(id);
         if (guild == null)
         {
-            EventCache.get(api).cache(EventCache.Type.GUILD, content.getString("guild_id"), () ->
+            EventCache.get(api).cache(EventCache.Type.GUILD, id, () ->
             {
                 handle(responseNumber, allContent);
             });
@@ -56,7 +53,7 @@ public class GuildMemberAddHandler extends SocketHandler
                 new GuildMemberJoinEvent(
                         api, responseNumber,
                         guild, member));
-        EventCache.get(api).playbackCache(EventCache.Type.USER, member.getUser().getId());
+        EventCache.get(api).playbackCache(EventCache.Type.USER, member.getUser().getIdLong());
         return null;
     }
 }

@@ -18,11 +18,17 @@ package net.dv8tion.jda.core.entities.impl;
 
 import net.dv8tion.jda.core.JDA;
 import net.dv8tion.jda.core.Permission;
-import net.dv8tion.jda.core.entities.*;
+import net.dv8tion.jda.core.entities.ChannelType;
+import net.dv8tion.jda.core.entities.EntityBuilder;
+import net.dv8tion.jda.core.entities.Invite;
+import net.dv8tion.jda.core.entities.Member;
+import net.dv8tion.jda.core.entities.User;
 import net.dv8tion.jda.core.exceptions.PermissionException;
-import net.dv8tion.jda.core.requests.*;
+import net.dv8tion.jda.core.requests.Request;
+import net.dv8tion.jda.core.requests.Response;
+import net.dv8tion.jda.core.requests.RestAction;
+import net.dv8tion.jda.core.requests.Route;
 import net.dv8tion.jda.core.requests.Route.CompiledRoute;
-
 import org.apache.http.util.Args;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -260,10 +266,11 @@ public class InviteImpl implements Invite
 
     public static class ChannelImpl implements Channel
     {
-        private final String id, name;
+        private final long id;
+        private final String name;
         private final ChannelType type;
 
-        public ChannelImpl(final String id, final String name, final ChannelType type)
+        public ChannelImpl(final long id, final String name, final ChannelType type)
         {
             this.id = id;
             this.name = name;
@@ -271,9 +278,9 @@ public class InviteImpl implements Invite
         }
 
         @Override
-        public String getId()
+        public long getIdLong()
         {
-            return this.id;
+            return id;
         }
 
         @Override
@@ -293,9 +300,10 @@ public class InviteImpl implements Invite
     public static class GuildImpl implements Guild
     {
 
-        private final String id, iconId, name, splashId;
+        private final String iconId, name, splashId;
+        private final long id;
 
-        public GuildImpl(final String id, final String iconId, final String name, final String splashId)
+        public GuildImpl(final long id, final String iconId, final String name, final String splashId)
         {
             this.id = id;
             this.iconId = iconId;
@@ -317,9 +325,9 @@ public class InviteImpl implements Invite
         }
 
         @Override
-        public String getId()
+        public long getIdLong()
         {
-            return this.id;
+            return id;
         }
 
         @Override

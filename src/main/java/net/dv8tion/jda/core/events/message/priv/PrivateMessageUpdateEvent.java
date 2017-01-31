@@ -17,7 +17,6 @@ package net.dv8tion.jda.core.events.message.priv;
 
 import net.dv8tion.jda.core.JDA;
 import net.dv8tion.jda.core.entities.Message;
-import net.dv8tion.jda.core.entities.PrivateChannel;
 
 /**
  * <b><u>PrivateMessageUpdateEvent</u></b><br>

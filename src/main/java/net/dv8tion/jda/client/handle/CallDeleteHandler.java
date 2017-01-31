@@ -36,9 +36,9 @@ public class CallDeleteHandler extends SocketHandler
     }
 
     @Override
-    protected String handleInternally(JSONObject content)
+    protected Long handleInternally(JSONObject content)
     {
-        String channelId = content.getString("channel_id");
+        final long channelId = Long.parseLong(content.getString("channel_id"));
         CallableChannel channel = api.asClient().getGroupById(channelId);
         if (channel == null)
             channel = api.getPrivateChannelMap().get(channelId);
@@ -70,8 +70,8 @@ public class CallDeleteHandler extends SocketHandler
         {
             PrivateChannelImpl priv = (PrivateChannelImpl) channel;
             priv.setCurrentCall(null);
-            ((JDAClientImpl) api.asClient()).getCallUserMap().remove(priv.getUser().getId());
-            ((JDAClientImpl) api.asClient()).getCallUserMap().remove(api.getSelfUser().getId());
+            ((JDAClientImpl) api.asClient()).getCallUserMap().remove(priv.getUser().getIdLong());
+            ((JDAClientImpl) api.asClient()).getCallUserMap().remove(api.getSelfUser().getIdLong());
         }
 
         api.getEventManager().handle(

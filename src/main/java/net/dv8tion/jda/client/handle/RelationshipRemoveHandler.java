@@ -24,7 +24,6 @@ import net.dv8tion.jda.client.events.relationship.FriendRemovedEvent;
 import net.dv8tion.jda.client.events.relationship.FriendRequestCanceledEvent;
 import net.dv8tion.jda.client.events.relationship.FriendRequestIgnoredEvent;
 import net.dv8tion.jda.client.events.relationship.UserUnblockedEvent;
-import net.dv8tion.jda.core.AccountType;
 import net.dv8tion.jda.core.entities.User;
 import net.dv8tion.jda.core.entities.impl.GuildImpl;
 import net.dv8tion.jda.core.entities.impl.JDAImpl;
@@ -43,9 +42,9 @@ public class RelationshipRemoveHandler extends SocketHandler
     }
 
     @Override
-    protected String handleInternally(JSONObject content)
+    protected Long handleInternally(JSONObject content)
     {
-        String userId = content.getString("id");
+        final long userId = Long.parseLong(content.getString("id"));
         RelationshipType type = RelationshipType.fromKey(content.getInt("type"));
 
         //Technically this could be used to detect when another user has unblocked us,
@@ -70,7 +69,7 @@ public class RelationshipRemoveHandler extends SocketHandler
         if (relationship.getType() == RelationshipType.FRIEND)
         {
             //The user is not in a different guild that we share
-            if (!api.getGuildMap().values().stream().anyMatch(g -> ((GuildImpl) g).getMembersMap().containsKey(userId)))
+            if (api.getGuildMap().values().stream().noneMatch(g -> ((GuildImpl) g).getMembersMap().containsKey(userId)))
             {
                 UserImpl user = (UserImpl) api.getUserMap().remove(userId);
                 if (user.hasPrivateChannel())
@@ -78,8 +77,8 @@ public class RelationshipRemoveHandler extends SocketHandler
                     PrivateChannelImpl priv = (PrivateChannelImpl) user.getPrivateChannel();
                     user.setFake(true);
                     priv.setFake(true);
-                    api.getFakeUserMap().put(user.getId(), user);
-                    api.getFakePrivateChannelMap().put(priv.getId(), priv);
+                    api.getFakeUserMap().put(user.getIdLong(), user);
+                    api.getFakePrivateChannelMap().put(priv.getIdLong(), priv);
                 }
                 else
                 {
@@ -91,7 +90,7 @@ public class RelationshipRemoveHandler extends SocketHandler
                         if (grp.getNonFriendUsers().contains(user))
                         {
                             user.setFake(true);
-                            api.getFakeUserMap().put(user.getId(), user);
+                            api.getFakeUserMap().put(user.getIdLong(), user);
                             break;
                         }
                     }
@@ -106,7 +105,7 @@ public class RelationshipRemoveHandler extends SocketHandler
             User user = relationship.getUser();
             if (user.isFake()
                     && !user.hasPrivateChannel()
-                    && api.asClient().getGroups().stream().allMatch(g -> !g.getUsers().contains(user)))
+                    && api.asClient().getGroups().stream().noneMatch(g -> g.getUsers().contains(user)))
             {
                 api.getFakeUserMap().remove(userId);
             }

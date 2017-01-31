@@ -45,21 +45,20 @@ public class GuildDeleteHandler extends SocketHandler
     }
 
     @Override
-    protected String handleInternally(JSONObject content)
+    protected Long handleInternally(JSONObject content)
     {
-        if (GuildLock.get(api).isLocked(content.getString("id")))
-        {
-            return content.getString("id");
-        }
+        final long id = Long.parseLong(content.getString("id"));
+        if (GuildLock.get(api).isLocked(id))
+            return id;
 
-        GuildImpl guild = (GuildImpl) api.getGuildMap().get(content.getString("id"));
-        AudioManagerImpl manager = (AudioManagerImpl) api.getAudioManagerMap().get(guild.getId());
+        GuildImpl guild = (GuildImpl) api.getGuildMap().get(id);
+        AudioManagerImpl manager = (AudioManagerImpl) api.getAudioManagerMap().get(guild.getIdLong());
         if (manager != null)
             manager.closeAudioConnection(ConnectionStatus.DISCONNECTED_REMOVED_FROM_GUILD);
 
         if (content.has("unavailable") && content.getBoolean("unavailable"))
         {
-            ((GuildImpl) guild).setAvailable(false);
+            guild.setAvailable(false);
             api.getEventManager().handle(
                     new GuildUnavailableEvent(
                             api, responseNumber,
@@ -69,18 +68,18 @@ public class GuildDeleteHandler extends SocketHandler
         }
 
         if (manager != null)
-            api.getAudioManagerMap().remove(guild.getId());
+            api.getAudioManagerMap().remove(guild.getIdLong());
 
         //cleaning up all users that we do not share a guild with anymore
         // Anything left in memberIds will be removed from the main userMap
-        Set<String> memberIds = guild.getMembersMap().keySet();
+        Set<Long> memberIds = guild.getMembersMap().keySet();
         for (Guild guildI : api.getGuilds())
         {
             GuildImpl g = (GuildImpl) guildI;
             if (g.equals(guild))
                 continue;
 
-            for (Iterator<String> it = memberIds.iterator(); it.hasNext();)
+            for (Iterator<Long> it = memberIds.iterator(); it.hasNext();)
             {
 
                 if (g.getMembersMap().containsKey(it.next()))
@@ -92,8 +91,8 @@ public class GuildDeleteHandler extends SocketHandler
         // Remember, everything left in memberIds is removed from the userMap
         if (api.getAccountType() == AccountType.CLIENT)
         {
-            HashMap<String, Relationship> relationships = ((JDAClientImpl) api.asClient()).getRelationshipMap();
-            for (Iterator<String> it = memberIds.iterator(); it.hasNext();)
+            HashMap<Long, Relationship> relationships = ((JDAClientImpl) api.asClient()).getRelationshipMap();
+            for (Iterator<Long> it = memberIds.iterator(); it.hasNext();)
             {
                 Relationship rel = relationships.get(it.next());
                 if (rel != null && rel.getType() == RelationshipType.FRIEND)
@@ -101,7 +100,7 @@ public class GuildDeleteHandler extends SocketHandler
             }
         }
 
-        for (String memberId : memberIds)
+        for (Long memberId : memberIds)
         {
             UserImpl user = (UserImpl) api.getUserMap().remove(memberId);
             if (user.hasPrivateChannel())
@@ -109,8 +108,8 @@ public class GuildDeleteHandler extends SocketHandler
                 PrivateChannelImpl priv = (PrivateChannelImpl) user.getPrivateChannel();
                 user.setFake(true);
                 priv.setFake(true);
-                api.getFakeUserMap().put(user.getId(), user);
-                api.getFakePrivateChannelMap().put(priv.getId(), priv);
+                api.getFakeUserMap().put(user.getIdLong(), user);
+                api.getFakePrivateChannelMap().put(priv.getIdLong(), priv);
             }
             else if (api.getAccountType() == AccountType.CLIENT)
             {
@@ -122,16 +121,16 @@ public class GuildDeleteHandler extends SocketHandler
                     if (grp.getNonFriendUsers().contains(user))
                     {
                         user.setFake(true);
-                        api.getFakeUserMap().put(user.getId(), user);
+                        api.getFakeUserMap().put(user.getIdLong(), user);
                         break; //Breaks from groups loop, not memberIds loop
                     }
                 }
             }
         }
 
-        api.getGuildMap().remove(guild.getId());
-        guild.getTextChannels().forEach(chan -> api.getTextChannelMap().remove(chan.getId()));
-        guild.getVoiceChannels().forEach(chan -> api.getVoiceChannelMap().remove(chan.getId()));
+        api.getGuildMap().remove(guild.getIdLong());
+        guild.getTextChannels().forEach(chan -> api.getTextChannelMap().remove(chan.getIdLong()));
+        guild.getVoiceChannels().forEach(chan -> api.getVoiceChannelMap().remove(chan.getIdLong()));
         api.getEventManager().handle(
                 new GuildLeaveEvent(
                         api, responseNumber,

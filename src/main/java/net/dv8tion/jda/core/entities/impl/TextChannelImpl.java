@@ -19,13 +19,21 @@ package net.dv8tion.jda.core.entities.impl;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.request.body.MultipartBody;
 import net.dv8tion.jda.client.exceptions.VerificationLevelException;
-import net.dv8tion.jda.core.*;
+import net.dv8tion.jda.core.AccountType;
+import net.dv8tion.jda.core.JDA;
+import net.dv8tion.jda.core.MessageBuilder;
+import net.dv8tion.jda.core.Permission;
 import net.dv8tion.jda.core.entities.*;
 import net.dv8tion.jda.core.exceptions.AccountTypeException;
 import net.dv8tion.jda.core.exceptions.PermissionException;
 import net.dv8tion.jda.core.managers.ChannelManager;
 import net.dv8tion.jda.core.managers.ChannelManagerUpdatable;
-import net.dv8tion.jda.core.requests.*;
+import net.dv8tion.jda.core.requests.ErrorResponse;
+import net.dv8tion.jda.core.requests.Request;
+import net.dv8tion.jda.core.requests.Requester;
+import net.dv8tion.jda.core.requests.Response;
+import net.dv8tion.jda.core.requests.RestAction;
+import net.dv8tion.jda.core.requests.Route;
 import net.dv8tion.jda.core.requests.restaction.InviteAction;
 import net.dv8tion.jda.core.utils.IOUtil;
 import net.dv8tion.jda.core.utils.MiscUtil;
@@ -38,12 +46,17 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public class TextChannelImpl implements TextChannel
 {
-    private final String id;
+    private final long id;
     private final GuildImpl guild;
     private final HashMap<Member, PermissionOverride> memberOverrides = new HashMap<>();
     private final HashMap<Role, PermissionOverride> roleOverrides = new HashMap<>();
@@ -56,7 +69,7 @@ public class TextChannelImpl implements TextChannel
     private String topic;
     private int rawPosition;
 
-    public TextChannelImpl(String id, Guild guild)
+    public TextChannelImpl(long id, Guild guild)
     {
         this.id = id;
         this.guild = (GuildImpl) guild;
@@ -65,11 +78,11 @@ public class TextChannelImpl implements TextChannel
     @Override
     public String getAsMention()
     {
-        return "<#" + getId() + '>';
+        return "<#" + id + '>';
     }
 
     @Override
-    public String getId()
+    public long getIdLong()
     {
         return id;
     }
@@ -99,7 +112,7 @@ public class TextChannelImpl implements TextChannel
         }
 
         JSONObject body = new JSONObject().put("messages", messageIds);
-        Route.CompiledRoute route = Route.Messages.DELETE_MESSAGES.compile(id);
+        Route.CompiledRoute route = Route.Messages.DELETE_MESSAGES.compile(getId());
         return new RestAction<Void>(getJDA(), route, body)
         {
             @Override
@@ -118,7 +131,7 @@ public class TextChannelImpl implements TextChannel
     {
         checkPermission(Permission.MANAGE_WEBHOOKS);
 
-        Route.CompiledRoute route = Route.Channels.GET_WEBHOOKS.compile(id);
+        Route.CompiledRoute route = Route.Channels.GET_WEBHOOKS.compile(getId());
         return new RestAction<List<Webhook>>(getJDA(), route, null)
         {
             @Override
@@ -317,7 +330,7 @@ public class TextChannelImpl implements TextChannel
         checkNull(data, "data InputStream");
         checkNull(fileName, "fileName");
 
-        Route.CompiledRoute route = Route.Messages.SEND_MESSAGE.compile(id);
+        Route.CompiledRoute route = Route.Messages.SEND_MESSAGE.compile(getId());
         MultipartBody body = Unirest.post(Requester.DISCORD_API_PREFIX + route.getCompiledRoute())
                 .fields(null); //We use this to change from an HttpRequest to a MultipartBody
 
@@ -353,7 +366,7 @@ public class TextChannelImpl implements TextChannel
         if (data.length > 8<<20)   //8MB
             throw new IllegalArgumentException("Provided data is too large! Max file-size is 8MB");
 
-        Route.CompiledRoute route = Route.Messages.SEND_MESSAGE.compile(id);
+        Route.CompiledRoute route = Route.Messages.SEND_MESSAGE.compile(getId());
         MultipartBody body = Unirest.post(Requester.DISCORD_API_PREFIX + route.getCompiledRoute())
                 .fields(null); //We use this to change from an HttpRequest to a MultipartBody
 
@@ -448,7 +461,7 @@ public class TextChannelImpl implements TextChannel
     @Override
     public RestAction<Void> sendTyping()
     {
-        Route.CompiledRoute route = Route.Channels.SEND_TYPING.compile(id);
+        Route.CompiledRoute route = Route.Channels.SEND_TYPING.compile(getId());
         return new RestAction<Void>(getJDA(), route, null)
         {
             @Override
@@ -606,7 +619,7 @@ public class TextChannelImpl implements TextChannel
     {
         checkPermission(Permission.MANAGE_CHANNEL);
 
-        Route.CompiledRoute route = Route.Channels.DELETE_CHANNEL.compile(id);
+        Route.CompiledRoute route = Route.Channels.DELETE_CHANNEL.compile(getId());
         return new RestAction<Void>(getJDA(), route, null)
         {
             @Override
@@ -638,7 +651,7 @@ public class TextChannelImpl implements TextChannel
                 .put("allow", 0)
                 .put("deny", 0);
 
-        Route.CompiledRoute route = Route.Channels.CREATE_PERM_OVERRIDE.compile(id, member.getUser().getId());
+        Route.CompiledRoute route = Route.Channels.CREATE_PERM_OVERRIDE.compile(getId(), member.getUser().getId());
         return new RestAction<PermissionOverride>(getJDA(), route, body)
         {
             @Override
@@ -674,7 +687,7 @@ public class TextChannelImpl implements TextChannel
                 .put("allow", 0)
                 .put("deny", 0);
 
-        Route.CompiledRoute route = Route.Channels.CREATE_PERM_OVERRIDE.compile(id, role.getId());
+        Route.CompiledRoute route = Route.Channels.CREATE_PERM_OVERRIDE.compile(getId(), role.getId());
         return new RestAction<PermissionOverride>(getJDA(), route, body)
         {
             @Override
@@ -695,22 +708,22 @@ public class TextChannelImpl implements TextChannel
     @Override
     public boolean equals(Object o)
     {
-        if (!(o instanceof TextChannel))
+        if (!(o instanceof TextChannelImpl))
             return false;
-        TextChannel oTChannel = (TextChannel) o;
-        return this == oTChannel || this.getId().equals(oTChannel.getId());
+        TextChannelImpl oTChannel = (TextChannelImpl) o;
+        return this == oTChannel || this.id == oTChannel.id;
     }
 
     @Override
     public int hashCode()
     {
-        return getId().hashCode();
+        return Long.hashCode(id);
     }
 
     @Override
     public String toString()
     {
-        return "TC:" + getName() + '(' + getId() + ')';
+        return "TC:" + getName() + '(' + id + ')';
     }
 
     @Override
@@ -719,7 +732,7 @@ public class TextChannelImpl implements TextChannel
         if (this == chan)
             return 0;
 
-        if (this.getGuild() != chan.getGuild())
+        if (!this.getGuild().equals(chan.getGuild()))
             throw new IllegalArgumentException("Cannot compare TextChannels that aren't from the same guild!");
 
         if (this.getPositionRaw() != chan.getPositionRaw())

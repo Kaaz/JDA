@@ -21,9 +21,18 @@ import com.mashape.unirest.request.body.MultipartBody;
 import net.dv8tion.jda.client.entities.Call;
 import net.dv8tion.jda.core.JDA;
 import net.dv8tion.jda.core.MessageBuilder;
+import net.dv8tion.jda.core.entities.ChannelType;
+import net.dv8tion.jda.core.entities.EntityBuilder;
+import net.dv8tion.jda.core.entities.Message;
+import net.dv8tion.jda.core.entities.MessageEmbed;
 import net.dv8tion.jda.core.entities.MessageHistory;
-import net.dv8tion.jda.core.entities.*;
-import net.dv8tion.jda.core.requests.*;
+import net.dv8tion.jda.core.entities.PrivateChannel;
+import net.dv8tion.jda.core.entities.User;
+import net.dv8tion.jda.core.requests.Request;
+import net.dv8tion.jda.core.requests.Requester;
+import net.dv8tion.jda.core.requests.Response;
+import net.dv8tion.jda.core.requests.RestAction;
+import net.dv8tion.jda.core.requests.Route;
 import net.dv8tion.jda.core.utils.IOUtil;
 import org.apache.http.util.Args;
 import org.json.JSONArray;
@@ -38,13 +47,13 @@ import java.util.List;
 
 public class PrivateChannelImpl implements PrivateChannel
 {
-    private final String id;
+    private final long id;
     private final User user;
 
     private Call currentCall = null;
     private boolean fake = false;
 
-    public PrivateChannelImpl(String id, User user)
+    public PrivateChannelImpl(long id, User user)
     {
         this.id = id;
         this.user = user;
@@ -137,7 +146,7 @@ public class PrivateChannelImpl implements PrivateChannel
         checkNull(data, "data InputStream");
         checkNull(fileName, "fileName");
 
-        Route.CompiledRoute route = Route.Messages.SEND_MESSAGE.compile(id);
+        Route.CompiledRoute route = Route.Messages.SEND_MESSAGE.compile(getId());
         MultipartBody body = Unirest.post(Requester.DISCORD_API_PREFIX + route.getCompiledRoute())
                 .fields(null); //We use this to change from an HttpRequest to a MultipartBody
 
@@ -170,7 +179,7 @@ public class PrivateChannelImpl implements PrivateChannel
         if (data.length > 8<<20)   //8MB
             throw new IllegalArgumentException("Provided data is too large! Max file-size is 8MB");
 
-        Route.CompiledRoute route = Route.Messages.SEND_MESSAGE.compile(id);
+        Route.CompiledRoute route = Route.Messages.SEND_MESSAGE.compile(getId());
         MultipartBody body = Unirest.post(Requester.DISCORD_API_PREFIX + route.getCompiledRoute())
                 .fields(null); //We use this to change from an HttpRequest to a MultipartBody
 
@@ -245,9 +254,9 @@ public class PrivateChannelImpl implements PrivateChannel
     }
 
     @Override
-    public RestAction sendTyping()
+    public RestAction<Void> sendTyping()
     {
-        Route.CompiledRoute route = Route.Channels.SEND_TYPING.compile(id);
+        Route.CompiledRoute route = Route.Channels.SEND_TYPING.compile(getId());
         return new RestAction<Void>(getJDA(), route, null)
         {
             @Override
@@ -332,7 +341,7 @@ public class PrivateChannelImpl implements PrivateChannel
     @Override
     public RestAction<Void> close()
     {
-        Route.CompiledRoute route = Route.Channels.DELETE_CHANNEL.compile(id);
+        Route.CompiledRoute route = Route.Channels.DELETE_CHANNEL.compile(getId());
         return new RestAction<Void>(getJDA(), route, null)
         {
             @Override
@@ -347,7 +356,7 @@ public class PrivateChannelImpl implements PrivateChannel
     }
 
     @Override
-    public String getId()
+    public long getIdLong()
     {
         return id;
     }
@@ -380,6 +389,28 @@ public class PrivateChannelImpl implements PrivateChannel
     {
         this.currentCall = currentCall;
         return this;
+    }
+
+    // -- Object --
+
+
+    @Override
+    public int hashCode()
+    {
+        return Long.hashCode(id);
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+        return obj instanceof PrivateChannelImpl
+                && this.id == ((PrivateChannelImpl) obj).id;
+    }
+
+    @Override
+    public String toString()
+    {
+        return "PC:" + getUser().getName() + '(' + id + ')';
     }
 
     private void checkNull(Object obj, String name)

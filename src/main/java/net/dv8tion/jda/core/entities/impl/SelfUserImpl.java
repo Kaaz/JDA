@@ -21,8 +21,6 @@ import net.dv8tion.jda.core.entities.SelfUser;
 import net.dv8tion.jda.core.exceptions.AccountTypeException;
 import net.dv8tion.jda.core.managers.AccountManager;
 import net.dv8tion.jda.core.managers.AccountManagerUpdatable;
-import net.dv8tion.jda.core.managers.RoleManager;
-import net.dv8tion.jda.core.managers.RoleManagerUpdatable;
 import net.dv8tion.jda.core.requests.RestAction;
 
 public class SelfUserImpl extends UserImpl implements SelfUser
@@ -37,7 +35,7 @@ public class SelfUserImpl extends UserImpl implements SelfUser
     //Client only
     private String email;
 
-    public SelfUserImpl(String id, JDAImpl api)
+    public SelfUserImpl(long id, JDAImpl api)
     {
         super(id, api);
     }

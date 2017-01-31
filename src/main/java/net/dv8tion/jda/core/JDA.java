@@ -18,7 +18,13 @@ package net.dv8tion.jda.core;
 
 import net.dv8tion.jda.bot.JDABot;
 import net.dv8tion.jda.client.JDAClient;
-import net.dv8tion.jda.core.entities.*;
+import net.dv8tion.jda.core.entities.Emote;
+import net.dv8tion.jda.core.entities.Guild;
+import net.dv8tion.jda.core.entities.PrivateChannel;
+import net.dv8tion.jda.core.entities.SelfUser;
+import net.dv8tion.jda.core.entities.TextChannel;
+import net.dv8tion.jda.core.entities.User;
+import net.dv8tion.jda.core.entities.VoiceChannel;
 import net.dv8tion.jda.core.hooks.IEventManager;
 import net.dv8tion.jda.core.managers.Presence;
 import net.dv8tion.jda.core.requests.RestAction;
@@ -206,6 +212,8 @@ public interface JDA
      * @return Possibly-null {@link net.dv8tion.jda.core.entities.User User} with matching id.
      */
     User getUserById(String id);
+    //todo docs
+    User getUserById(long id);
 
     /**
      * This unmodifiable returns all {@link net.dv8tion.jda.core.entities.User Users} that have the same username as the one provided.
@@ -276,6 +284,8 @@ public interface JDA
      * @return Possibly-null {@link net.dv8tion.jda.core.entities.Guild Guild} with matching id.
      */
     Guild getGuildById(String id);
+    //todo docs
+    Guild getGuildById(long id);
 
     /**
      * An unmodifiable list of all {@link net.dv8tion.jda.core.entities.Guild Guilds} that have the same name as the one provided.
@@ -322,6 +332,8 @@ public interface JDA
      * @return Possibly-null {@link net.dv8tion.jda.core.entities.TextChannel TextChannel} with matching id.
      */
     TextChannel getTextChannelById(String id);
+    //todo docs
+    TextChannel getTextChannelById(long id);
 
     /**
      * An unmodifiable list of all {@link net.dv8tion.jda.core.entities.TextChannel TextChannels} that have the same name as the one provided.
@@ -361,6 +373,8 @@ public interface JDA
      * @return Possibly-null {@link net.dv8tion.jda.core.entities.VoiceChannel VoiceChannel} with matching id.
      */
     VoiceChannel getVoiceChannelById(String id);
+    //todo docs
+    VoiceChannel getVoiceChannelById(long id);
 
     /**
      * An unmodifiable list of all {@link net.dv8tion.jda.core.entities.VoiceChannel VoiceChannels} that have the same name as the one provided.
@@ -394,6 +408,8 @@ public interface JDA
      * @return Possibly-null {@link net.dv8tion.jda.core.entities.PrivateChannel PrivateChannel} with matching id.
      */
     PrivateChannel getPrivateChannelById(String id);
+    //todo docs
+    PrivateChannel getPrivateChannelById(long id);
 
     /**
      * A collection of all to us known emotes (managed/restricted included).
@@ -415,6 +431,8 @@ public interface JDA
      * @return An {@link net.dv8tion.jda.core.entities.Emote Emote} represented by this id or null if none is found in our cache.
      */
     Emote getEmoteById(String id);
+    //todo docs
+    Emote getEmoteById(long id);
 
     /**
      * An unmodifiable list of all {@link net.dv8tion.jda.core.entities.Emote Emotes} that have the same name as the one provided.

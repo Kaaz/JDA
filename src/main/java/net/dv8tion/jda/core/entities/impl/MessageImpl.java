@@ -26,12 +26,17 @@ import net.dv8tion.jda.core.requests.Request;
 import net.dv8tion.jda.core.requests.Response;
 import net.dv8tion.jda.core.requests.RestAction;
 import net.dv8tion.jda.core.requests.Route;
-import net.dv8tion.jda.core.utils.PermissionUtil;
 import org.apache.http.util.Args;
 import org.json.JSONObject;
 
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Stack;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -40,7 +45,7 @@ public class MessageImpl implements Message
     private static final Pattern EMOTE_PATTERN = Pattern.compile("<:([^:]+):([0-9]+)>");
 
     private final JDAImpl api;
-    private final String id;
+    private final long id;
     private final MessageType type;
     private final MessageChannel channel;
     private final boolean fromWebhook;
@@ -61,12 +66,12 @@ public class MessageImpl implements Message
     private List<Emote> emotes = null;
     private List<MessageReaction> reactions = new LinkedList<>();
 
-    public MessageImpl(String id, MessageChannel channel, boolean fromWebhook)
+    public MessageImpl(long id, MessageChannel channel, boolean fromWebhook)
     {
         this(id, channel, fromWebhook, MessageType.DEFAULT);
     }
 
-    public MessageImpl(String id, MessageChannel channel, boolean fromWebhook, MessageType type)
+    public MessageImpl(long id, MessageChannel channel, boolean fromWebhook, MessageType type)
     {
         this.id = id;
         this.channel = channel;
@@ -119,7 +124,7 @@ public class MessageImpl implements Message
             return new RestAction.EmptyRestAction<>(null);
         }
 
-        return channel.addReactionById(id, emote);
+        return channel.addReactionById(getId(), emote);
     }
 
     @Override
@@ -134,7 +139,7 @@ public class MessageImpl implements Message
         if (reaction != null && reaction.isSelf())
             return new RestAction.EmptyRestAction<>(null);
 
-        return channel.addReactionById(id, unicode);
+        return channel.addReactionById(getId(), unicode);
     }
 
     @Override
@@ -161,7 +166,7 @@ public class MessageImpl implements Message
     }
 
     @Override
-    public String getId()
+    public long getIdLong()
     {
         return id;
     }
@@ -404,9 +409,10 @@ public class MessageImpl implements Message
             Matcher matcher = EMOTE_PATTERN.matcher(getRawContent());
             while (matcher.find())
             {
-                String emoteId   = matcher.group(2);
+                final String emoteIdString = matcher.group(2);
+                final long emoteId = Long.parseLong(emoteIdString);
                 String emoteName = matcher.group(1);
-                Emote emote = api.getEmoteById(emoteId);
+                Emote emote = api.getEmoteById(emoteIdString);
                 if (emote == null)
                     emote = new EmoteImpl(emoteId, api).setName(emoteName);
                 emotes.add(emote);
@@ -551,16 +557,16 @@ public class MessageImpl implements Message
     @Override
     public boolean equals(Object o)
     {
-        if (!(o instanceof Message))
+        if (!(o instanceof MessageImpl))
             return false;
-        Message oMsg = (Message) o;
-        return this == oMsg || this.getId().equals(oMsg.getId());
+        MessageImpl oMsg = (MessageImpl) o;
+        return this == oMsg || this.id == oMsg.id;
     }
 
     @Override
     public int hashCode()
     {
-        return getId().hashCode();
+        return Long.hashCode(id);
     }
 
     @Override
@@ -571,7 +577,7 @@ public class MessageImpl implements Message
         {
             content = content.substring(0, 17) + "...";
         }
-        return "M:" + author.getName() + ':' + content + '(' + getId() + ')';
+        return "M:" + author.getName() + ':' + content + '(' + id + ')';
     }
 
     public JSONObject toJSONObject()

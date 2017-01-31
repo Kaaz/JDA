@@ -18,7 +18,13 @@ package net.dv8tion.jda.core.entities.impl;
 
 import net.dv8tion.jda.core.JDA;
 import net.dv8tion.jda.core.Permission;
-import net.dv8tion.jda.core.entities.*;
+import net.dv8tion.jda.core.entities.EntityBuilder;
+import net.dv8tion.jda.core.entities.Guild;
+import net.dv8tion.jda.core.entities.Invite;
+import net.dv8tion.jda.core.entities.Member;
+import net.dv8tion.jda.core.entities.PermissionOverride;
+import net.dv8tion.jda.core.entities.Role;
+import net.dv8tion.jda.core.entities.VoiceChannel;
 import net.dv8tion.jda.core.exceptions.PermissionException;
 import net.dv8tion.jda.core.managers.ChannelManager;
 import net.dv8tion.jda.core.managers.ChannelManagerUpdatable;
@@ -27,7 +33,6 @@ import net.dv8tion.jda.core.requests.Response;
 import net.dv8tion.jda.core.requests.RestAction;
 import net.dv8tion.jda.core.requests.Route;
 import net.dv8tion.jda.core.requests.restaction.InviteAction;
-
 import org.apache.http.util.Args;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -40,12 +45,12 @@ import java.util.List;
 
 public class VoiceChannelImpl implements VoiceChannel
 {
-    private final String id;
+    private final long id;
     private final GuildImpl guild;
 
     private final HashMap<Member, PermissionOverride> memberOverrides = new HashMap<>();
     private final HashMap<Role, PermissionOverride> roleOverrides = new HashMap<>();
-    private final HashMap<String, Member> connectedMembers = new HashMap<>();
+    private final HashMap<Long, Member> connectedMembers = new HashMap<>();
 
     private volatile ChannelManager manager;
     private volatile ChannelManagerUpdatable managerUpdatable;
@@ -56,7 +61,7 @@ public class VoiceChannelImpl implements VoiceChannel
     private int userLimit;
     private int bitrate;
 
-    public VoiceChannelImpl(String id, Guild guild)
+    public VoiceChannelImpl(long id, Guild guild)
     {
         this.id = id;
         this.guild = (GuildImpl) guild;
@@ -186,7 +191,7 @@ public class VoiceChannelImpl implements VoiceChannel
     {
         checkPermission(Permission.MANAGE_CHANNEL);
 
-        Route.CompiledRoute route = Route.Channels.DELETE_CHANNEL.compile(id);
+        Route.CompiledRoute route = Route.Channels.DELETE_CHANNEL.compile(getId());
         return new RestAction<Void>(getJDA(), route, null)
         {
             @Override
@@ -218,7 +223,7 @@ public class VoiceChannelImpl implements VoiceChannel
                 .put("allow", 0)
                 .put("deny", 0);
 
-        Route.CompiledRoute route = Route.Channels.CREATE_PERM_OVERRIDE.compile(id, member.getUser().getId());
+        Route.CompiledRoute route = Route.Channels.CREATE_PERM_OVERRIDE.compile(getId(), member.getUser().getId());
         return new RestAction<PermissionOverride>(getJDA(), route, body)
         {
             @Override
@@ -254,7 +259,7 @@ public class VoiceChannelImpl implements VoiceChannel
                 .put("allow", 0)
                 .put("deny", 0);
 
-        Route.CompiledRoute route = Route.Channels.CREATE_PERM_OVERRIDE.compile(id, role.getId());
+        Route.CompiledRoute route = Route.Channels.CREATE_PERM_OVERRIDE.compile(getId(), role.getId());
         return new RestAction<PermissionOverride>(getJDA(), route, body)
         {
             @Override
@@ -273,7 +278,7 @@ public class VoiceChannelImpl implements VoiceChannel
     }
 
     @Override
-    public String getId()
+    public long getIdLong()
     {
         return id;
     }
@@ -284,19 +289,19 @@ public class VoiceChannelImpl implements VoiceChannel
         if (!(o instanceof VoiceChannel))
             return false;
         VoiceChannel oVChannel = (VoiceChannel) o;
-        return this == oVChannel || this.getId().equals(oVChannel.getId());
+        return this == oVChannel || this.id == oVChannel.getIdLong();
     }
 
     @Override
     public int hashCode()
     {
-        return getId().hashCode();
+        return Long.hashCode(id);
     }
 
     @Override
     public String toString()
     {
-        return "VC:" + getName() + '(' + getId() + ')';
+        return "VC:" + getName() + '(' + id + ')';
     }
 
     @Override
@@ -358,7 +363,7 @@ public class VoiceChannelImpl implements VoiceChannel
         return roleOverrides;
     }
 
-    public HashMap<String, Member> getConnectedMembersMap()
+    public HashMap<Long, Member> getConnectedMembersMap()
     {
         return connectedMembers;
     }

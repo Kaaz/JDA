@@ -16,12 +16,8 @@
 package net.dv8tion.jda.core.events;
 
 import net.dv8tion.jda.core.JDA;
-import net.dv8tion.jda.core.entities.VoiceChannel;
 
 import java.time.OffsetDateTime;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
 
 /**
  * <b><u>ShutdownEvent</u></b><br>

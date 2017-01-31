@@ -26,7 +26,14 @@ import net.dv8tion.jda.core.JDA;
 import net.dv8tion.jda.core.audio.AudioWebSocket;
 import net.dv8tion.jda.core.audio.factory.DefaultSendFactory;
 import net.dv8tion.jda.core.audio.factory.IAudioSendFactory;
-import net.dv8tion.jda.core.entities.*;
+import net.dv8tion.jda.core.entities.Emote;
+import net.dv8tion.jda.core.entities.EntityBuilder;
+import net.dv8tion.jda.core.entities.Guild;
+import net.dv8tion.jda.core.entities.PrivateChannel;
+import net.dv8tion.jda.core.entities.SelfUser;
+import net.dv8tion.jda.core.entities.TextChannel;
+import net.dv8tion.jda.core.entities.User;
+import net.dv8tion.jda.core.entities.VoiceChannel;
 import net.dv8tion.jda.core.events.StatusChangeEvent;
 import net.dv8tion.jda.core.exceptions.AccountTypeException;
 import net.dv8tion.jda.core.exceptions.RateLimitedException;
@@ -35,7 +42,12 @@ import net.dv8tion.jda.core.hooks.InterfacedEventManager;
 import net.dv8tion.jda.core.managers.AudioManager;
 import net.dv8tion.jda.core.managers.Presence;
 import net.dv8tion.jda.core.managers.impl.PresenceImpl;
-import net.dv8tion.jda.core.requests.*;
+import net.dv8tion.jda.core.requests.Request;
+import net.dv8tion.jda.core.requests.Requester;
+import net.dv8tion.jda.core.requests.Response;
+import net.dv8tion.jda.core.requests.RestAction;
+import net.dv8tion.jda.core.requests.Route;
+import net.dv8tion.jda.core.requests.WebSocketClient;
 import net.dv8tion.jda.core.requests.ratelimit.IBucket;
 import net.dv8tion.jda.core.utils.SimpleLog;
 import org.apache.http.HttpHost;
@@ -54,16 +66,16 @@ public class JDAImpl implements JDA
 {
     public static final SimpleLog LOG = SimpleLog.getLog("JDA");
 
-    protected final HashMap<String, User> users = new HashMap<>(200);
-    protected final HashMap<String, Guild> guilds = new HashMap<>(10);
-    protected final HashMap<String, TextChannel> textChannels = new HashMap<>();
-    protected final HashMap<String, VoiceChannel> voiceChannels = new HashMap<>();
-    protected final HashMap<String, PrivateChannel> privateChannels = new HashMap<>();
+    protected final HashMap<Long, User> users = new HashMap<>(200);
+    protected final HashMap<Long, Guild> guilds = new HashMap<>(10);
+    protected final HashMap<Long, TextChannel> textChannels = new HashMap<>();
+    protected final HashMap<Long, VoiceChannel> voiceChannels = new HashMap<>();
+    protected final HashMap<Long, PrivateChannel> privateChannels = new HashMap<>();
 
-    protected final HashMap<String, User> fakeUsers = new HashMap<>();
-    protected final HashMap<String, PrivateChannel> fakePrivateChannels = new HashMap<>();
+    protected final HashMap<Long, User> fakeUsers = new HashMap<>();
+    protected final HashMap<Long, PrivateChannel> fakePrivateChannels = new HashMap<>();
 
-    protected final HashMap<String, AudioManager> audioManagers = new HashMap<>();
+    protected final HashMap<Long, AudioManager> audioManagers = new HashMap<>();
 
     protected final AccountType accountType;
     protected final PresenceImpl presence;
@@ -148,7 +160,7 @@ public class JDAImpl implements JDA
             this.token = token;
     }
 
-    public void verifyToken() throws LoginException, RateLimitedException
+    public void verifyToken() throws LoginException
     {
         RestAction<JSONObject> login = new RestAction<JSONObject>(this, Route.Self.GET_SELF.compile(), null)
         {
@@ -167,10 +179,10 @@ public class JDAImpl implements JDA
             }
         };
 
-        JSONObject userResponse = null;
+        JSONObject userResponse;
         try
         {
-            userResponse = login.block();
+            userResponse = login.complete();
         }
         catch (RuntimeException e)
         {
@@ -210,7 +222,7 @@ public class JDAImpl implements JDA
             try
             {
                 //Now that we have reversed the AccountTypes, attempt to get User info again.
-                userResponse = login.block();
+                userResponse = login.complete();
             }
             catch (RuntimeException e)
             {
@@ -300,6 +312,12 @@ public class JDAImpl implements JDA
     @Override
     public User getUserById(String id)
     {
+        return users.get(Long.parseLong(id));
+    }
+
+    @Override
+    public User getUserById(long id)
+    {
         return users.get(id);
     }
 
@@ -351,6 +369,12 @@ public class JDAImpl implements JDA
     @Override
     public Guild getGuildById(String id)
     {
+        return guilds.get(Long.parseLong(id));
+    }
+
+    @Override
+    public Guild getGuildById(long id)
+    {
         return guilds.get(id);
     }
 
@@ -372,6 +396,12 @@ public class JDAImpl implements JDA
 
     @Override
     public TextChannel getTextChannelById(String id)
+    {
+        return textChannels.get(Long.parseLong(id));
+    }
+
+    @Override
+    public TextChannel getTextChannelById(long id)
     {
         return textChannels.get(id);
     }
@@ -395,6 +425,12 @@ public class JDAImpl implements JDA
     @Override
     public VoiceChannel getVoiceChannelById(String id)
     {
+        return voiceChannels.get(Long.parseLong(id));
+    }
+
+    @Override
+    public VoiceChannel getVoiceChannelById(long id)
+    {
         return voiceChannels.get(id);
     }
 
@@ -417,6 +453,12 @@ public class JDAImpl implements JDA
     @Override
     public PrivateChannel getPrivateChannelById(String id)
     {
+        return privateChannels.get(Long.parseLong(id));
+    }
+
+    @Override
+    public PrivateChannel getPrivateChannelById(long id)
+    {
         return privateChannels.get(id);
     }
 
@@ -438,6 +480,12 @@ public class JDAImpl implements JDA
 
     @Override
     public Emote getEmoteById(String id)
+    {
+        return getEmoteById(Long.parseLong(id));
+    }
+
+    @Override
+    public Emote getEmoteById(long id)
     {
         for (Guild guild : getGuilds())
         {
@@ -605,42 +653,42 @@ public class JDAImpl implements JDA
         return client;
     }
 
-    public HashMap<String, User> getUserMap()
+    public HashMap<Long, User> getUserMap()
     {
         return users;
     }
 
-    public HashMap<String, Guild> getGuildMap()
+    public HashMap<Long, Guild> getGuildMap()
     {
         return guilds;
     }
 
-    public HashMap<String, TextChannel> getTextChannelMap()
+    public HashMap<Long, TextChannel> getTextChannelMap()
     {
         return textChannels;
     }
 
-    public HashMap<String, VoiceChannel> getVoiceChannelMap()
+    public HashMap<Long, VoiceChannel> getVoiceChannelMap()
     {
         return voiceChannels;
     }
 
-    public HashMap<String, PrivateChannel> getPrivateChannelMap()
+    public HashMap<Long, PrivateChannel> getPrivateChannelMap()
     {
         return privateChannels;
     }
 
-    public HashMap<String, User> getFakeUserMap()
+    public HashMap<Long, User> getFakeUserMap()
     {
         return fakeUsers;
     }
 
-    public HashMap<String, PrivateChannel> getFakePrivateChannelMap()
+    public HashMap<Long, PrivateChannel> getFakePrivateChannelMap()
     {
         return fakePrivateChannels;
     }
 
-    public HashMap<String, AudioManager> getAudioManagerMap()
+    public HashMap<Long, AudioManager> getAudioManagerMap()
     {
         return audioManagers;
     }

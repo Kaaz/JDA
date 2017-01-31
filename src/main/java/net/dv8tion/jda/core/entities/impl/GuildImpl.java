@@ -16,7 +16,10 @@
 
 package net.dv8tion.jda.core.entities.impl;
 
-import net.dv8tion.jda.core.*;
+import net.dv8tion.jda.core.AccountType;
+import net.dv8tion.jda.core.JDA;
+import net.dv8tion.jda.core.Permission;
+import net.dv8tion.jda.core.Region;
 import net.dv8tion.jda.core.entities.*;
 import net.dv8tion.jda.core.exceptions.PermissionException;
 import net.dv8tion.jda.core.managers.AudioManager;
@@ -31,24 +34,32 @@ import net.dv8tion.jda.core.requests.Route;
 import net.dv8tion.jda.core.utils.MiscUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.util.Args;
-import org.json.*;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public class GuildImpl implements Guild
 {
-    private final String id;
+    private final long id;
     private final JDAImpl api;
-    private final HashMap<String, TextChannel> textChannels = new HashMap<>();
-    private final HashMap<String, VoiceChannel> voiceChannels = new HashMap<>();
-    private final HashMap<String, Member> members = new HashMap<>();
-    private final HashMap<String, Role> roles = new HashMap<>();
-    private final HashMap<String, Emote> emotes = new HashMap<>();
+    private final HashMap<Long, TextChannel> textChannels = new HashMap<>();
+    private final HashMap<Long, VoiceChannel> voiceChannels = new HashMap<>();
+    private final HashMap<Long, Member> members = new HashMap<>();
+    private final HashMap<Long, Role> roles = new HashMap<>();
+    private final HashMap<Long, Emote> emotes = new HashMap<>();
 
-    private final HashMap<String, JSONObject> cachedPresences = new HashMap<>();
+    private final HashMap<Long, JSONObject> cachedPresences = new HashMap<>();
 
     private volatile GuildManager manager;
     private volatile GuildManagerUpdatable managerUpdatable;
@@ -70,7 +81,7 @@ public class GuildImpl implements Guild
     private boolean available;
     private boolean canSendVerification = false;
 
-    public GuildImpl(JDAImpl api, String id)
+    public GuildImpl(JDAImpl api, long id)
     {
         this.id = id;
         this.api = api;
@@ -118,7 +129,7 @@ public class GuildImpl implements Guild
         if (!getSelfMember().hasPermission(Permission.MANAGE_WEBHOOKS))
             throw new PermissionException(Permission.MANAGE_WEBHOOKS);
 
-        Route.CompiledRoute route = Route.Guilds.GET_WEBHOOKS.compile(id);
+        Route.CompiledRoute route = Route.Guilds.GET_WEBHOOKS.compile(String.valueOf(id));
 
         return new RestAction<List<Webhook>>(api, route, null)
         {
@@ -173,7 +184,7 @@ public class GuildImpl implements Guild
     @Override
     public boolean isMember(User user)
     {
-        return members.containsKey(user.getId());
+        return members.containsKey(user.getIdLong());
     }
 
     @Override
@@ -190,6 +201,12 @@ public class GuildImpl implements Guild
 
     @Override
     public Member getMemberById(String userId)
+    {
+        return members.get(Long.parseLong(userId));
+    }
+
+    @Override
+    public Member getMemberById(long userId)
     {
         return members.get(userId);
     }
@@ -262,6 +279,12 @@ public class GuildImpl implements Guild
     @Override
     public TextChannel getTextChannelById(String id)
     {
+        return textChannels.get(Long.parseLong(id));
+    }
+
+    @Override
+    public TextChannel getTextChannelById(long id)
+    {
         return textChannels.get(id);
     }
 
@@ -287,6 +310,12 @@ public class GuildImpl implements Guild
 
     @Override
     public VoiceChannel getVoiceChannelById(String id)
+    {
+        return voiceChannels.get(Long.parseLong(id));
+    }
+
+    @Override
+    public VoiceChannel getVoiceChannelById(long id)
     {
         return voiceChannels.get(id);
     }
@@ -314,6 +343,12 @@ public class GuildImpl implements Guild
     @Override
     public Role getRoleById(String id)
     {
+        return roles.get(Long.parseLong(id));
+    }
+
+    @Override
+    public Role getRoleById(long id)
+    {
         return roles.get(id);
     }
 
@@ -339,6 +374,12 @@ public class GuildImpl implements Guild
 
     @Override
     public Emote getEmoteById(String id)
+    {
+        return emotes.get(Long.parseLong(id));
+    }
+
+    @Override
+    public Emote getEmoteById(long id)
     {
         return emotes.get(id);
     }
@@ -427,7 +468,7 @@ public class GuildImpl implements Guild
         if (owner.equals(getSelfMember()))
             throw new IllegalStateException("Cannot leave a guild that you are the owner of! Transfer guild ownership first!");
 
-        Route.CompiledRoute route = Route.Self.LEAVE_GUILD.compile(id);
+        Route.CompiledRoute route = Route.Self.LEAVE_GUILD.compile(getId());
         return new RestAction<Void>(api, route, null)
         {
             @Override
@@ -463,7 +504,7 @@ public class GuildImpl implements Guild
             mfaBody = new JSONObject().put("code", mfaCode);
         }
 
-        Route.CompiledRoute route = Route.Guilds.DELETE_GUILD.compile(id);
+        Route.CompiledRoute route = Route.Guilds.DELETE_GUILD.compile(getId());
         return new RestAction<Void>(api, route, mfaBody)
         {
             @Override
@@ -483,7 +524,7 @@ public class GuildImpl implements Guild
         if (!api.isAudioEnabled())
             throw new IllegalStateException("Audio is disabled. Cannot retrieve an AudioManager while audio is disabled.");
 
-        HashMap<String, AudioManager> audioManagers = ((JDAImpl) api).getAudioManagerMap();
+        HashMap<Long, AudioManager> audioManagers = api.getAudioManagerMap();
         AudioManager mng = audioManagers.get(id);
         if (mng == null)
         {
@@ -563,7 +604,7 @@ public class GuildImpl implements Guild
     }
 
     @Override
-    public String getId()
+    public long getIdLong()
     {
         return id;
     }
@@ -651,32 +692,32 @@ public class GuildImpl implements Guild
 
     // -- Map getters --
 
-    public HashMap<String, TextChannel> getTextChannelsMap()
+    public HashMap<Long, TextChannel> getTextChannelsMap()
     {
         return textChannels;
     }
 
-    public HashMap<String, VoiceChannel> getVoiceChannelMap()
+    public HashMap<Long, VoiceChannel> getVoiceChannelMap()
     {
         return voiceChannels;
     }
 
-    public HashMap<String, Member> getMembersMap()
+    public HashMap<Long, Member> getMembersMap()
     {
         return members;
     }
 
-    public HashMap<String, Role> getRolesMap()
+    public HashMap<Long, Role> getRolesMap()
     {
         return roles;
     }
 
-    public HashMap<String, JSONObject> getCachedPresenceMap()
+    public HashMap<Long, JSONObject> getCachedPresenceMap()
     {
         return cachedPresences;
     }
 
-    public HashMap<String, Emote> getEmoteMap()
+    public HashMap<Long, Emote> getEmoteMap()
     {
         return emotes;
     }
@@ -687,22 +728,22 @@ public class GuildImpl implements Guild
     @Override
     public boolean equals(Object o)
     {
-        if (!(o instanceof Guild))
+        if (!(o instanceof GuildImpl))
             return false;
-        Guild oGuild = (Guild) o;
-        return this == oGuild || this.getId().equals(oGuild.getId());
+        GuildImpl oGuild = (GuildImpl) o;
+        return this == oGuild || this.id == oGuild.id;
     }
 
     @Override
     public int hashCode()
     {
-        return getId().hashCode();
+        return Long.hashCode(id);
     }
 
     @Override
     public String toString()
     {
-        return "G:" + getName() + '(' + getId() + ')';
+        return "G:" + getName() + '(' + id + ')';
     }
 
     @Override
