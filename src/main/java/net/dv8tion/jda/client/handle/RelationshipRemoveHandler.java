@@ -57,10 +57,7 @@ public class RelationshipRemoveHandler extends SocketHandler
         Relationship relationship = api.asClient().getRelationshipById(userId, type);
         if (relationship == null)
         {
-            EventCache.get(api).cache(EventCache.Type.RELATIONSHIP, userId, () ->
-            {
-                handle(responseNumber, allContent);
-            });
+            EventCache.get(api).cache(EventCache.Type.RELATIONSHIP, userId, () -> handle(responseNumber, allContent));
             EventCache.LOG.debug("Received a RELATIONSHIP_REMOVE for a relationship that was not yet cached! JSON: " + content);
             return null;
         }
@@ -69,7 +66,7 @@ public class RelationshipRemoveHandler extends SocketHandler
         if (relationship.getType() == RelationshipType.FRIEND)
         {
             //The user is not in a different guild that we share
-            if (api.getGuildMap().values().stream().noneMatch(g -> ((GuildImpl) g).getMembersMap().containsKey(userId)))
+            if (api.getGuildMap().valueCollection().stream().noneMatch(g -> ((GuildImpl) g).getMembersMap().containsKey(userId)))
             {
                 UserImpl user = (UserImpl) api.getUserMap().remove(userId);
                 if (user.hasPrivateChannel())

@@ -57,7 +57,7 @@ public class GuildRoleDeleteHandler extends SocketHandler
         }
 
         //Now that the role is removed from the Guild, remove it from all users.
-        for (Member m : guild.getMembersMap().values())
+        for (Member m : guild.getMembersMap().valueCollection())
         {
             MemberImpl member = (MemberImpl) m;
             member.getRoleSet().remove(removedRole);

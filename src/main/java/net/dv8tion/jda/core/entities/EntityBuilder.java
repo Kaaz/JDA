@@ -16,6 +16,7 @@
 
 package net.dv8tion.jda.core.entities;
 
+import gnu.trove.map.TLongObjectMap;
 import net.dv8tion.jda.client.entities.Friend;
 import net.dv8tion.jda.client.entities.Group;
 import net.dv8tion.jda.client.entities.Relationship;
@@ -42,6 +43,7 @@ import net.dv8tion.jda.core.handle.GuildMembersChunkHandler;
 import net.dv8tion.jda.core.handle.ReadyHandler;
 import net.dv8tion.jda.core.requests.GuildLock;
 import net.dv8tion.jda.core.requests.WebSocketClient;
+import net.dv8tion.jda.core.utils.MiscUtil;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -53,7 +55,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.TreeMap;
@@ -70,8 +71,8 @@ public class EntityBuilder
     private static final Pattern channelMentionPattern = Pattern.compile("<#(\\d+)>");
 
     protected final JDAImpl api;
-    protected final HashMap<Long, JSONObject> cachedGuildJsons = new HashMap<>();
-    protected final HashMap<Long, Consumer<Guild>> cachedGuildCallbacks = new HashMap<>();
+    protected final TLongObjectMap<JSONObject> cachedGuildJsons = MiscUtil.newLongMap();
+    protected final TLongObjectMap<Consumer<Guild>> cachedGuildCallbacks = MiscUtil.newLongMap();
 
     public static EntityBuilder get(JDA api)
     {
@@ -174,7 +175,7 @@ public class EntityBuilder
         if (!guild.isNull("emojis"))
         {
             JSONArray array = guild.getJSONArray("emojis");
-            Map<Long, Emote> emoteMap = guildObj.getEmoteMap();
+            TLongObjectMap<Emote> emoteMap = guildObj.getEmoteMap();
             for (int i = 0; i < array.length(); i++)
             {
                 JSONObject object = array.getJSONObject(i);
@@ -859,7 +860,7 @@ public class EntityBuilder
             message.setMentionedRoles(new LinkedList<Role>(mentionedRoles.values()));
 
             List<TextChannel> mentionedChannels = new LinkedList<>();
-            Map<Long, TextChannel> chanMap = ((GuildImpl) textChannel.getGuild()).getTextChannelsMap();
+            TLongObjectMap<TextChannel> chanMap = ((GuildImpl) textChannel.getGuild()).getTextChannelsMap();
             Matcher matcher = channelMentionPattern.matcher(content);
             while (matcher.find())
             {
@@ -1106,7 +1107,7 @@ public class EntityBuilder
             ((JDAClientImpl) api.asClient()).getGroupMap().put(groupId, group);
         }
 
-        HashMap<Long, User> groupUsers = group.getUserMap();
+        TLongObjectMap<User> groupUsers = group.getUserMap();
         groupUsers.put(api.getSelfUser().getIdLong(), api.getSelfUser());
         for (int i = 0; i < recipients.length(); i++)
         {

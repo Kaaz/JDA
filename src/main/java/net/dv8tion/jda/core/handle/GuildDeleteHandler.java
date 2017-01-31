@@ -16,6 +16,9 @@
 
 package net.dv8tion.jda.core.handle;
 
+import gnu.trove.iterator.TLongIterator;
+import gnu.trove.map.TLongObjectMap;
+import gnu.trove.set.TLongSet;
 import net.dv8tion.jda.client.entities.Group;
 import net.dv8tion.jda.client.entities.Relationship;
 import net.dv8tion.jda.client.entities.RelationshipType;
@@ -32,10 +35,6 @@ import net.dv8tion.jda.core.events.guild.GuildUnavailableEvent;
 import net.dv8tion.jda.core.managers.impl.AudioManagerImpl;
 import net.dv8tion.jda.core.requests.GuildLock;
 import org.json.JSONObject;
-
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Set;
 
 public class GuildDeleteHandler extends SocketHandler
 {
@@ -72,14 +71,14 @@ public class GuildDeleteHandler extends SocketHandler
 
         //cleaning up all users that we do not share a guild with anymore
         // Anything left in memberIds will be removed from the main userMap
-        Set<Long> memberIds = guild.getMembersMap().keySet();
+        TLongSet memberIds = guild.getMembersMap().keySet();
         for (Guild guildI : api.getGuilds())
         {
             GuildImpl g = (GuildImpl) guildI;
             if (g.equals(guild))
                 continue;
 
-            for (Iterator<Long> it = memberIds.iterator(); it.hasNext();)
+            for (TLongIterator it = memberIds.iterator(); it.hasNext();)
             {
 
                 if (g.getMembersMap().containsKey(it.next()))
@@ -91,8 +90,8 @@ public class GuildDeleteHandler extends SocketHandler
         // Remember, everything left in memberIds is removed from the userMap
         if (api.getAccountType() == AccountType.CLIENT)
         {
-            HashMap<Long, Relationship> relationships = ((JDAClientImpl) api.asClient()).getRelationshipMap();
-            for (Iterator<Long> it = memberIds.iterator(); it.hasNext();)
+            TLongObjectMap< Relationship> relationships = ((JDAClientImpl) api.asClient()).getRelationshipMap();
+            for (TLongIterator it = memberIds.iterator(); it.hasNext();)
             {
                 Relationship rel = relationships.get(it.next());
                 if (rel != null && rel.getType() == RelationshipType.FRIEND)
@@ -100,7 +99,7 @@ public class GuildDeleteHandler extends SocketHandler
             }
         }
 
-        for (Long memberId : memberIds)
+        memberIds.forEach(memberId ->
         {
             UserImpl user = (UserImpl) api.getUserMap().remove(memberId);
             if (user.hasPrivateChannel())
@@ -126,7 +125,9 @@ public class GuildDeleteHandler extends SocketHandler
                     }
                 }
             }
-        }
+
+            return true;
+        });
 
         api.getGuildMap().remove(guild.getIdLong());
         guild.getTextChannels().forEach(chan -> api.getTextChannelMap().remove(chan.getIdLong()));

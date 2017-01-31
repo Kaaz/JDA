@@ -16,6 +16,7 @@
 
 package net.dv8tion.jda.client.entities.impl;
 
+import gnu.trove.map.TLongObjectMap;
 import net.dv8tion.jda.client.JDAClient;
 import net.dv8tion.jda.client.entities.CallUser;
 import net.dv8tion.jda.client.entities.Friend;
@@ -33,20 +34,20 @@ import net.dv8tion.jda.core.requests.Request;
 import net.dv8tion.jda.core.requests.Response;
 import net.dv8tion.jda.core.requests.RestAction;
 import net.dv8tion.jda.core.requests.Route;
+import net.dv8tion.jda.core.utils.MiscUtil;
 import org.apache.http.util.Args;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class JDAClientImpl implements JDAClient
 {
     protected final JDAImpl api;
-    protected final HashMap<Long, Group> groups = new HashMap<>();
-    protected final HashMap<Long, Relationship> relationships = new HashMap<>();
-    protected final HashMap<Long, CallUser> callUsers = new HashMap<>();
+    protected final TLongObjectMap<Group> groups = MiscUtil.newLongMap();
+    protected final TLongObjectMap<Relationship> relationships = MiscUtil.newLongMap();
+    protected final TLongObjectMap<CallUser> callUsers = MiscUtil.newLongMap();
     protected UserSettingsImpl userSettings;
 
     public JDAClientImpl(JDAImpl api)
@@ -66,13 +67,13 @@ public class JDAClientImpl implements JDAClient
     {
         return Collections.unmodifiableList(
                 new ArrayList<>(
-                        groups.values()));
+                        groups.valueCollection()));
     }
 
     @Override
     public List<Group> getGroupsByName(String name, boolean ignoreCase)
     {
-        return Collections.unmodifiableList(groups.values().stream()
+        return Collections.unmodifiableList(groups.valueCollection().stream()
                 .filter(g -> g.getName() != null
                         && (ignoreCase
                             ? g.getName().equalsIgnoreCase(name)
@@ -97,13 +98,13 @@ public class JDAClientImpl implements JDAClient
     {
         return Collections.unmodifiableList(
                 new ArrayList<>(
-                        relationships.values()));
+                        relationships.valueCollection()));
     }
 
     @Override
     public List<Relationship> getRelationships(RelationshipType type)
     {
-        return Collections.unmodifiableList(relationships.values().stream()
+        return Collections.unmodifiableList(relationships.valueCollection().stream()
                 .filter(r -> r.getType().equals(type))
                 .collect(Collectors.toList()));
     }
@@ -111,7 +112,7 @@ public class JDAClientImpl implements JDAClient
     @Override
     public List<Relationship> getRelationships(RelationshipType type, String name, boolean ignoreCase)
     {
-        return Collections.unmodifiableList(relationships.values().stream()
+        return Collections.unmodifiableList(relationships.valueCollection().stream()
                 .filter(r -> r.getType().equals(type))
                 .filter(r -> (ignoreCase
                         ? r.getUser().getName().equalsIgnoreCase(name)
@@ -122,7 +123,7 @@ public class JDAClientImpl implements JDAClient
     @Override
     public List<Relationship> getRelationshipsByName(String name, boolean ignoreCase)
     {
-        return Collections.unmodifiableList(relationships.values().stream()
+        return Collections.unmodifiableList(relationships.valueCollection().stream()
                 .filter(r -> (ignoreCase
                         ? r.getUser().getName().equalsIgnoreCase(name)
                         : r.getUser().getName().equals(name)))
@@ -219,17 +220,17 @@ public class JDAClientImpl implements JDAClient
         return userSettings;
     }
 
-    public HashMap<Long, Group> getGroupMap()
+    public TLongObjectMap<Group> getGroupMap()
     {
         return groups;
     }
 
-    public HashMap<Long, Relationship> getRelationshipMap()
+    public TLongObjectMap<Relationship> getRelationshipMap()
     {
         return relationships;
     }
 
-    public HashMap<Long, CallUser> getCallUserMap()
+    public TLongObjectMap<CallUser> getCallUserMap()
     {
         return callUsers;
     }

@@ -15,6 +15,9 @@
  */
 package net.dv8tion.jda.core.utils;
 
+import gnu.trove.TCollections;
+import gnu.trove.map.TLongObjectMap;
+import gnu.trove.map.hash.TLongObjectHashMap;
 import net.dv8tion.jda.core.entities.ISnowflake;
 import org.apache.http.util.Args;
 
@@ -81,5 +84,17 @@ public class MiscUtil
     public static String getDateTimeString(OffsetDateTime time)
     {
         return time.format(dtFormatter);
+    }
+
+    /**
+     * Generates a new thread-safe {@link gnu.trove.map.TLongObjectMap TLongObjectMap}
+     * @param  <T>
+     *         The Object type
+     *
+     * @return a new thread-safe {@link gnu.trove.map.TLongObjectMap TLongObjectMap}
+     */
+    public static <T> TLongObjectMap<T> newLongMap()
+    {
+        return TCollections.synchronizedMap(new TLongObjectHashMap<T>());
     }
 }

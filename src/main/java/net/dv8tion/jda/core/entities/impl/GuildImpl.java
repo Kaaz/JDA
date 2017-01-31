@@ -16,6 +16,7 @@
 
 package net.dv8tion.jda.core.entities.impl;
 
+import gnu.trove.map.TLongObjectMap;
 import net.dv8tion.jda.core.AccountType;
 import net.dv8tion.jda.core.JDA;
 import net.dv8tion.jda.core.Permission;
@@ -44,7 +45,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -53,13 +54,13 @@ public class GuildImpl implements Guild
 {
     private final long id;
     private final JDAImpl api;
-    private final HashMap<Long, TextChannel> textChannels = new HashMap<>();
-    private final HashMap<Long, VoiceChannel> voiceChannels = new HashMap<>();
-    private final HashMap<Long, Member> members = new HashMap<>();
-    private final HashMap<Long, Role> roles = new HashMap<>();
-    private final HashMap<Long, Emote> emotes = new HashMap<>();
+    private final TLongObjectMap<TextChannel> textChannels = MiscUtil.newLongMap();
+    private final TLongObjectMap<VoiceChannel> voiceChannels = MiscUtil.newLongMap();
+    private final TLongObjectMap<Member> members = MiscUtil.newLongMap();
+    private final TLongObjectMap<Role> roles = MiscUtil.newLongMap();
+    private final TLongObjectMap<Emote> emotes = MiscUtil.newLongMap();
 
-    private final HashMap<Long, JSONObject> cachedPresences = new HashMap<>();
+    private final TLongObjectMap<JSONObject> cachedPresences = MiscUtil.newLongMap();
 
     private volatile GuildManager manager;
     private volatile GuildManagerUpdatable managerUpdatable;
@@ -214,14 +215,14 @@ public class GuildImpl implements Guild
     @Override
     public List<Member> getMembers()
     {
-        return Collections.unmodifiableList(new ArrayList<>(members.values()));
+        return Collections.unmodifiableList(new ArrayList<>(members.valueCollection()));
     }
 
     @Override
     public List<Member> getMembersByName(String name, boolean ignoreCase)
     {
         Args.notNull(name, "name");
-        return Collections.unmodifiableList(members.values().stream()
+        return Collections.unmodifiableList(members.valueCollection().stream()
                 .filter(m ->
                     ignoreCase
                     ? name.equalsIgnoreCase(m.getUser().getName())
@@ -233,7 +234,7 @@ public class GuildImpl implements Guild
     public List<Member> getMembersByNickname(String nickname, boolean ignoreCase)
     {
         Args.notNull(nickname, "nickname");
-        return Collections.unmodifiableList(members.values().stream()
+        return Collections.unmodifiableList(members.valueCollection().stream()
                 .filter(m ->
                     ignoreCase
                     ? nickname.equalsIgnoreCase(m.getNickname())
@@ -245,7 +246,7 @@ public class GuildImpl implements Guild
     public List<Member> getMembersByEffectiveName(String name, boolean ignoreCase)
     {
         Args.notNull(name, "name");
-        return Collections.unmodifiableList(members.values().stream()
+        return Collections.unmodifiableList(members.valueCollection().stream()
                 .filter(m ->
                     ignoreCase
                     ? name.equalsIgnoreCase(m.getEffectiveName())
@@ -271,7 +272,7 @@ public class GuildImpl implements Guild
                 throw new IllegalArgumentException("Role provided was from a different Guild! Role: " + r);
         }
 
-        return Collections.unmodifiableList(members.values().stream()
+        return Collections.unmodifiableList(members.valueCollection().stream()
                         .filter(m -> m.getRoles().containsAll(roles))
                         .collect(Collectors.toList()));
     }
@@ -292,7 +293,7 @@ public class GuildImpl implements Guild
     public List<TextChannel> getTextChannelsByName(String name, boolean ignoreCase)
     {
         Args.notNull(name, "name");
-        return Collections.unmodifiableList(textChannels.values().stream()
+        return Collections.unmodifiableList(textChannels.valueCollection().stream()
                 .filter(tc ->
                     ignoreCase
                     ? name.equalsIgnoreCase(tc.getName())
@@ -303,8 +304,8 @@ public class GuildImpl implements Guild
     @Override
     public List<TextChannel> getTextChannels()
     {
-        ArrayList<TextChannel> channels = new ArrayList<>(textChannels.values());
-        Collections.sort(channels, (c1, c2) -> c2.compareTo(c1));
+        ArrayList<TextChannel> channels = new ArrayList<>(textChannels.valueCollection());
+        channels.sort(Comparator.reverseOrder());
         return Collections.unmodifiableList(channels);
     }
 
@@ -324,7 +325,7 @@ public class GuildImpl implements Guild
     public List<VoiceChannel> getVoiceChannelsByName(String name, boolean ignoreCase)
     {
         Args.notNull(name, "name");
-        return Collections.unmodifiableList(voiceChannels.values().stream()
+        return Collections.unmodifiableList(voiceChannels.valueCollection().stream()
             .filter(vc ->
                     ignoreCase
                     ? name.equalsIgnoreCase(vc.getName())
@@ -335,8 +336,8 @@ public class GuildImpl implements Guild
     @Override
     public List<VoiceChannel> getVoiceChannels()
     {
-        List<VoiceChannel> channels = new ArrayList<>(voiceChannels.values());
-        Collections.sort(channels, (v1, v2) -> v2.compareTo(v1));
+        List<VoiceChannel> channels = new ArrayList<>(voiceChannels.valueCollection());
+        channels.sort(Comparator.reverseOrder());
         return Collections.unmodifiableList(channels);
     }
 
@@ -355,8 +356,8 @@ public class GuildImpl implements Guild
     @Override
     public List<Role> getRoles()
     {
-        List<Role> list = new ArrayList<>(roles.values());
-        Collections.sort(list, (r1, r2) -> r2.compareTo(r1));
+        List<Role> list = new ArrayList<>(roles.valueCollection());
+        list.sort(Comparator.reverseOrder());
         return Collections.unmodifiableList(list);
     }
 
@@ -364,7 +365,7 @@ public class GuildImpl implements Guild
     public List<Role> getRolesByName(String name, boolean ignoreCase)
     {
         Args.notNull(name, "name");
-        return Collections.unmodifiableList(roles.values().stream()
+        return Collections.unmodifiableList(roles.valueCollection().stream()
                 .filter(r ->
                         ignoreCase
                         ? name.equalsIgnoreCase(r.getName())
@@ -387,14 +388,14 @@ public class GuildImpl implements Guild
     @Override
     public List<Emote> getEmotes()
     {
-        return Collections.unmodifiableList(new LinkedList<>(emotes.values()));
+        return Collections.unmodifiableList(new LinkedList<>(emotes.valueCollection()));
     }
 
     @Override
     public List<Emote> getEmotesByName(String name, boolean ignoreCase)
     {
         Args.notNull(name, "name");
-        return Collections.unmodifiableList(emotes.values().parallelStream()
+        return Collections.unmodifiableList(emotes.valueCollection().parallelStream()
                 .filter(e ->
                         ignoreCase
                         ? StringUtils.equalsIgnoreCase(e.getName(), name)
@@ -524,7 +525,7 @@ public class GuildImpl implements Guild
         if (!api.isAudioEnabled())
             throw new IllegalStateException("Audio is disabled. Cannot retrieve an AudioManager while audio is disabled.");
 
-        HashMap<Long, AudioManager> audioManagers = api.getAudioManagerMap();
+        TLongObjectMap<AudioManager> audioManagers = api.getAudioManagerMap();
         AudioManager mng = audioManagers.get(id);
         if (mng == null)
         {
@@ -551,7 +552,7 @@ public class GuildImpl implements Guild
     public List<GuildVoiceState> getVoiceStates()
     {
         return Collections.unmodifiableList(
-                members.values().stream().map(Member::getVoiceState).collect(Collectors.toList()));
+                members.valueCollection().stream().map(Member::getVoiceState).collect(Collectors.toList()));
     }
 
     @Override
@@ -692,32 +693,32 @@ public class GuildImpl implements Guild
 
     // -- Map getters --
 
-    public HashMap<Long, TextChannel> getTextChannelsMap()
+    public TLongObjectMap<TextChannel> getTextChannelsMap()
     {
         return textChannels;
     }
 
-    public HashMap<Long, VoiceChannel> getVoiceChannelMap()
+    public TLongObjectMap<VoiceChannel> getVoiceChannelMap()
     {
         return voiceChannels;
     }
 
-    public HashMap<Long, Member> getMembersMap()
+    public TLongObjectMap<Member> getMembersMap()
     {
         return members;
     }
 
-    public HashMap<Long, Role> getRolesMap()
+    public TLongObjectMap<Role> getRolesMap()
     {
         return roles;
     }
 
-    public HashMap<Long, JSONObject> getCachedPresenceMap()
+    public TLongObjectMap<JSONObject> getCachedPresenceMap()
     {
         return cachedPresences;
     }
 
-    public HashMap<Long, Emote> getEmoteMap()
+    public TLongObjectMap<Emote> getEmoteMap()
     {
         return emotes;
     }

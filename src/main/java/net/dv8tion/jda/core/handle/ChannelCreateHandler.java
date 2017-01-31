@@ -38,9 +38,13 @@ public class ChannelCreateHandler extends SocketHandler
     {
         ChannelType type = ChannelType.fromId(content.getInt("type"));
 
-        final long id = Long.parseLong(content.getString("guild_id"));
-        if ((type == ChannelType.TEXT || type == ChannelType.VOICE ) && GuildLock.get(api).isLocked(id))
-            return id;
+        long id = 0;
+        if (type == ChannelType.TEXT || type == ChannelType.VOICE)
+        {
+            id = Long.parseLong(content.getString("guild_id"));
+            if (GuildLock.get(api).isLocked(id))
+                return id;
+        }
 
         switch (type)
         {
@@ -79,7 +83,7 @@ public class ChannelCreateHandler extends SocketHandler
             default:
                 throw new IllegalArgumentException("Discord provided an CREATE_CHANNEL event with an unknown channel type! JSON: " + content);
         }
-        EventCache.get(api).playbackCache(EventCache.Type.CHANNEL, id);
+        EventCache.get(api).playbackCache(EventCache.Type.CHANNEL, Long.parseLong(content.getString("id")));
         return null;
     }
 }

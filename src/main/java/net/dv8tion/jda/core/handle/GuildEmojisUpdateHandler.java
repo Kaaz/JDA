@@ -16,6 +16,7 @@
 
 package net.dv8tion.jda.core.handle;
 
+import gnu.trove.map.TLongObjectMap;
 import net.dv8tion.jda.core.entities.Emote;
 import net.dv8tion.jda.core.entities.Role;
 import net.dv8tion.jda.core.entities.impl.EmoteImpl;
@@ -28,7 +29,6 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 public class GuildEmojisUpdateHandler extends SocketHandler
@@ -53,8 +53,8 @@ public class GuildEmojisUpdateHandler extends SocketHandler
             return null;
         }
         JSONArray array = content.getJSONArray("emojis");
-        Map<Long, Emote> emoteMap = guild.getEmoteMap();
-        List<Emote> oldEmotes = new ArrayList<>(emoteMap.values()); //snapshot of emote cache
+        TLongObjectMap<Emote> emoteMap = guild.getEmoteMap();
+        List<Emote> oldEmotes = new ArrayList<>(emoteMap.valueCollection()); //snapshot of emote cache
         for (int i = 0; i < array.length(); i++)
         {
             JSONObject current = array.getJSONObject(i);

@@ -19,6 +19,8 @@ import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.JsonNode;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
+import gnu.trove.map.TLongObjectMap;
+import gnu.trove.map.hash.TLongObjectHashMap;
 import net.dv8tion.jda.core.OnlineStatus;
 import net.dv8tion.jda.core.entities.Game;
 import net.dv8tion.jda.core.entities.Guild;
@@ -32,7 +34,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -250,8 +252,8 @@ public class WidgetUtil
         private final long id;
         private final String name;
         private final String invite;
-        private final HashMap<String, VoiceChannel> channels;
-        private final HashMap<String, Member> members;
+        private final TLongObjectMap<VoiceChannel> channels;
+        private final TLongObjectMap<Member> members;
         
         /**
          * Constructs an unavailable Widget
@@ -262,8 +264,8 @@ public class WidgetUtil
             id = guildId;
             name = null;
             invite = null;
-            channels = null;
-            members = null;
+            channels = new TLongObjectHashMap<>();
+            members = new TLongObjectHashMap<>();
         }
         
         /**
@@ -282,14 +284,14 @@ public class WidgetUtil
             id = Long.parseLong(json.getString("id"));
             name = json.getString("name");
             invite = inviteCode;
-            channels = new HashMap<>();
-            members = new HashMap<>();
+            channels = MiscUtil.newLongMap();
+            members = MiscUtil.newLongMap();
             
             JSONArray channelsJson = json.getJSONArray("channels");
             for (int i = 0; i < channelsJson.length(); i++)
             {
                 JSONObject channel = channelsJson.getJSONObject(i);
-                channels.put(channel.getString("id"), new VoiceChannel(channel, this));
+                channels.put(Long.parseLong(channel.getString("id")), new VoiceChannel(channel, this));
             }
             
             JSONArray membersJson = json.getJSONArray("members");
@@ -299,7 +301,7 @@ public class WidgetUtil
                 Member member = new Member(memberJson, this);
                 if (!memberJson.isNull("channel_id")) // voice state
                 {
-                    VoiceChannel channel = channels.get(memberJson.getString("channel_id"));
+                    VoiceChannel channel = channels.get(Long.parseLong(memberJson.getString("channel_id")));
                     member.setVoiceState(new VoiceState(channel, 
                             memberJson.getBoolean("mute"), 
                             memberJson.getBoolean("deaf"), 
@@ -310,7 +312,7 @@ public class WidgetUtil
                             this));
                     channel.addMember(member);
                 }
-                members.put(member.getId(), member);
+                members.put(member.getIdLong(), member);
             }
         }
         
@@ -333,33 +335,48 @@ public class WidgetUtil
         
         /**
          * Gets the name of the guild
+         *
+         * @throws IllegalStateException
+         *         If the widget is not {@link #isAvailable() available}
          * 
          * @return the name of the guild
          */
         public String getName()
         {
+            checkAvailable();
+
             return name;
         }
         
         /**
          * Gets an invite code for the guild, or null if no invite channel is
          * enabled in the widget
+         *
+         * @throws IllegalStateException
+         *         If the widget is not {@link #isAvailable() available}
          * 
          * @return an invite code for the guild, if widget invites are enabled
          */
         public String getInviteCode()
         {
+            checkAvailable();
+
             return invite;
         }
         
         /**
          * Gets the list of voice channels in the guild
+         *
+         * @throws IllegalStateException
+         *         If the widget is not {@link #isAvailable() available}
          * 
          * @return the list of voice channels in the guild
          */
         public List<VoiceChannel> getVoiceChannels()
         {
-            return new ArrayList<>(channels.values());
+            checkAvailable();
+
+            return Collections.unmodifiableList(new ArrayList<>(channels.valueCollection()));
         }
         
         /**
@@ -368,21 +385,38 @@ public class WidgetUtil
          * @param  id
          *         the ID of the voice channel
          *
+         * @throws IllegalStateException
+         *         If the widget is not {@link #isAvailable() available}
+         *
          * @return possibly-null VoiceChannel with the given ID. 
          */
         public VoiceChannel getVoiceChannelById(String id)
         {
+            checkAvailable();
+
+            return channels.get(Long.parseLong(id));
+        }
+        //todo docs
+        public VoiceChannel getVoiceChannelById(long id)
+        {
+            checkAvailable();
+
             return channels.get(id);
         }
         
         /**
          * Gets a list of online members in the guild
+         *
+         * @throws IllegalStateException
+         *         If the widget is not {@link #isAvailable() available}
          * 
          * @return the list of members
          */
         public List<Member> getMembers()
         {
-            return new ArrayList<>(members.values());
+            checkAvailable();
+
+            return Collections.unmodifiableList(new ArrayList<>(members.valueCollection()));
         }
         
         /**
@@ -391,10 +425,23 @@ public class WidgetUtil
          * @param  id
          *         the ID of the member
          *
+         * @throws IllegalStateException
+         *         If the widget is not {@link #isAvailable() available}
+         *
          * @return possibly-null Member with the given ID. 
          */
         public Member getMemberById(String id)
         {
+            checkAvailable();
+
+            return members.get(Long.parseLong(id));
+        }
+
+        //todo docs
+        public Member getMemberById(long id)
+        {
+            checkAvailable();
+
             return members.get(id);
         }
 
@@ -415,6 +462,12 @@ public class WidgetUtil
         public String toString()
         {
             return "W:" + (isAvailable() ? getName() : "") + '(' + id + ')';
+        }
+
+        private void checkAvailable()
+        {
+            if (!isAvailable)
+                throw new IllegalStateException("The widget for this Guild is unavailable!");
         }
         
         

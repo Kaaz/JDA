@@ -21,6 +21,7 @@ import net.dv8tion.jda.client.JDAClient;
 import net.dv8tion.jda.core.entities.Emote;
 import net.dv8tion.jda.core.entities.Guild;
 import net.dv8tion.jda.core.entities.PrivateChannel;
+import net.dv8tion.jda.core.entities.Role;
 import net.dv8tion.jda.core.entities.SelfUser;
 import net.dv8tion.jda.core.entities.TextChannel;
 import net.dv8tion.jda.core.entities.User;
@@ -300,6 +301,13 @@ public interface JDA
      *      the provided name.
      */
     List<Guild> getGuildsByName(String name, boolean ignoreCase);
+    //todo docs
+    List<Role> getRoles();
+    //todo docs
+    Role getRoleById(String id);
+    Role getRoleById(long id);
+    //todo docs
+    List<Role> getRolesByName(String name, boolean ignoreCase);
 
     /**
      * An unmodifiable List of all {@link net.dv8tion.jda.core.entities.TextChannel TextChannels} of all connected

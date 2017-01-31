@@ -18,6 +18,7 @@ package net.dv8tion.jda.client.entities.impl;
 
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.request.body.MultipartBody;
+import gnu.trove.map.TLongObjectMap;
 import net.dv8tion.jda.client.entities.Call;
 import net.dv8tion.jda.client.entities.Friend;
 import net.dv8tion.jda.client.entities.Group;
@@ -38,6 +39,7 @@ import net.dv8tion.jda.core.requests.Response;
 import net.dv8tion.jda.core.requests.RestAction;
 import net.dv8tion.jda.core.requests.Route;
 import net.dv8tion.jda.core.utils.IOUtil;
+import net.dv8tion.jda.core.utils.MiscUtil;
 import org.apache.http.util.Args;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -47,7 +49,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -56,7 +57,7 @@ public class GroupImpl implements Group
     private final long id;
     private final JDAImpl api;
 
-    private HashMap<Long, User> userMap = new HashMap<>();
+    private TLongObjectMap<User> userMap = MiscUtil.newLongMap();
 
     private Call currentCall;
     private User owner;
@@ -104,20 +105,21 @@ public class GroupImpl implements Group
     {
         return Collections.unmodifiableList(
                 new ArrayList<>(
-                        userMap.values()));
+                        userMap.valueCollection()));
     }
 
     @Override
     public List<User> getNonFriendUsers()
     {
         List<User> nonFriends = new ArrayList<>();
-        HashMap<Long, Relationship> map = ((JDAClientImpl) api.asClient()).getRelationshipMap();
-        userMap.forEach((userId, user) ->
+        TLongObjectMap<Relationship> map = ((JDAClientImpl) api.asClient()).getRelationshipMap();
+        userMap.forEachEntry((userId, user) ->
         {
             Relationship relationship = map.get(userId);
             Friend friend = relationship instanceof Friend ? (Friend) relationship : null;
             if (friend == null)
                 nonFriends.add(user);
+            return true;
         });
         return Collections.unmodifiableList(nonFriends);
     }
@@ -126,14 +128,15 @@ public class GroupImpl implements Group
     public List<Friend> getFriends()
     {
         List<Friend> friends = new ArrayList<>();
-        HashMap<Long, Relationship> map = ((JDAClientImpl) api.asClient()).getRelationshipMap();
-        for (long userId : userMap.keySet())
+        TLongObjectMap<Relationship> map = ((JDAClientImpl) api.asClient()).getRelationshipMap();
+        userMap.forEachKey(userId ->
         {
             Relationship relationship = map.get(userId);
             Friend friend = relationship instanceof Friend ? (Friend) relationship : null;
             if (friend != null)
                 friends.add(friend);
-        }
+            return true;
+        });
         return Collections.unmodifiableList(friends);
     }
 
@@ -438,7 +441,7 @@ public class GroupImpl implements Group
         return Long.hashCode(id);
     }
 
-    public HashMap<Long, User> getUserMap()
+    public TLongObjectMap<User> getUserMap()
     {
         return userMap;
     }

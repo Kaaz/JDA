@@ -16,6 +16,7 @@
 
 package net.dv8tion.jda.client.entities.impl;
 
+import gnu.trove.map.hash.TLongObjectHashMap;
 import net.dv8tion.jda.client.entities.Call;
 import net.dv8tion.jda.client.entities.CallUser;
 import net.dv8tion.jda.client.entities.CallableChannel;
@@ -25,9 +26,7 @@ import net.dv8tion.jda.core.entities.PrivateChannel;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class CallImpl implements Call
@@ -35,8 +34,8 @@ public class CallImpl implements Call
     private final CallableChannel callableChannel;
     private final long messageId;
 
-    private HashMap<Long, CallUser> callUsers = new HashMap<>();
-    private HashMap<Long, CallUser> callUserHistory = new HashMap<>();
+    private TLongObjectHashMap<CallUser> callUsers = new TLongObjectHashMap<>();
+    private TLongObjectHashMap<CallUser> callUserHistory = new TLongObjectHashMap<>();
 
     private Region region;
 
@@ -91,15 +90,15 @@ public class CallImpl implements Call
     @Override
     public List<CallUser> getRingingUsers()
     {
-        return Collections.unmodifiableList(callUsers.values().stream()
-                .filter(cu -> cu.isRinging())
+        return Collections.unmodifiableList(callUsers.valueCollection().stream()
+                .filter(CallUser::isRinging)
                 .collect(Collectors.toList()));
     }
 
     @Override
     public List<CallUser> getConnectedUsers()
     {
-        return Collections.unmodifiableList(callUsers.values().stream()
+        return Collections.unmodifiableList(callUsers.valueCollection().stream()
                 .filter(cu -> cu.getVoiceState().isInCall())
                 .collect(Collectors.toList()));
     }
@@ -108,14 +107,14 @@ public class CallImpl implements Call
     public List<CallUser> getCallUserHistory()
     {
         return Collections.unmodifiableList(
-                new ArrayList<>(callUserHistory.values()));
+                new ArrayList<>(callUserHistory.valueCollection()));
     }
 
     @Override
     public List<CallUser> getAllCallUsers()
     {
         return Collections.unmodifiableList(
-                new ArrayList<>(callUsers.values()));
+                new ArrayList<>(callUsers.valueCollection()));
     }
 
     @Override
@@ -143,7 +142,7 @@ public class CallImpl implements Call
             return false;
 
         Call oCall = (Call) o;
-        return getId().equals(oCall.getId()) && Objects.equals(messageId, oCall.getMessageId());
+        return getId().equals(oCall.getId()) && messageId == oCall.getMessageIdLong();
     }
 
     @Override
@@ -158,12 +157,12 @@ public class CallImpl implements Call
         return this;
     }
 
-    public HashMap<Long, CallUser> getCallUserMap()
+    public TLongObjectHashMap<CallUser> getCallUserMap()
     {
         return callUsers;
     }
 
-    public HashMap<Long, CallUser> getCallUserHistoryMap()
+    public TLongObjectHashMap<CallUser> getCallUserHistoryMap()
     {
         return callUserHistory;
     }

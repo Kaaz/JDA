@@ -49,17 +49,18 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class TextChannelImpl implements TextChannel
 {
     private final long id;
     private final GuildImpl guild;
-    private final HashMap<Member, PermissionOverride> memberOverrides = new HashMap<>();
-    private final HashMap<Role, PermissionOverride> roleOverrides = new HashMap<>();
+    private final Map<Member, PermissionOverride> memberOverrides = new ConcurrentHashMap<>();
+    private final Map<Role, PermissionOverride> roleOverrides = new ConcurrentHashMap<>();
 
     private volatile ChannelManager manager;
     private volatile ChannelManagerUpdatable managerUpdatable;
@@ -227,7 +228,7 @@ public class TextChannelImpl implements TextChannel
     public List<Member> getMembers()
     {
         return Collections.unmodifiableList(
-        ((GuildImpl) getGuild()).getMembersMap().values().stream()
+        ((GuildImpl) getGuild()).getMembersMap().valueCollection().stream()
                 .filter(m -> m.getPermissions(this).contains(Permission.MESSAGE_READ))
                 .collect(Collectors.toList()));
     }
@@ -769,12 +770,12 @@ public class TextChannelImpl implements TextChannel
 
     // -- Map Getters --
 
-    public HashMap<Member, PermissionOverride> getMemberOverrideMap()
+    public Map<Member, PermissionOverride> getMemberOverrideMap()
     {
         return memberOverrides;
     }
 
-    public HashMap<Role, PermissionOverride> getRoleOverrideMap()
+    public Map<Role, PermissionOverride> getRoleOverrideMap()
     {
         return roleOverrides;
     }

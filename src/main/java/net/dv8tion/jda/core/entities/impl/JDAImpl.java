@@ -17,6 +17,7 @@
 package net.dv8tion.jda.core.entities.impl;
 
 import com.mashape.unirest.http.Unirest;
+import gnu.trove.map.TLongObjectMap;
 import net.dv8tion.jda.bot.JDABot;
 import net.dv8tion.jda.bot.entities.impl.JDABotImpl;
 import net.dv8tion.jda.client.JDAClient;
@@ -30,6 +31,7 @@ import net.dv8tion.jda.core.entities.Emote;
 import net.dv8tion.jda.core.entities.EntityBuilder;
 import net.dv8tion.jda.core.entities.Guild;
 import net.dv8tion.jda.core.entities.PrivateChannel;
+import net.dv8tion.jda.core.entities.Role;
 import net.dv8tion.jda.core.entities.SelfUser;
 import net.dv8tion.jda.core.entities.TextChannel;
 import net.dv8tion.jda.core.entities.User;
@@ -49,6 +51,7 @@ import net.dv8tion.jda.core.requests.RestAction;
 import net.dv8tion.jda.core.requests.Route;
 import net.dv8tion.jda.core.requests.WebSocketClient;
 import net.dv8tion.jda.core.requests.ratelimit.IBucket;
+import net.dv8tion.jda.core.utils.MiscUtil;
 import net.dv8tion.jda.core.utils.SimpleLog;
 import org.apache.http.HttpHost;
 import org.apache.http.util.Args;
@@ -58,7 +61,6 @@ import javax.security.auth.login.LoginException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -66,16 +68,16 @@ public class JDAImpl implements JDA
 {
     public static final SimpleLog LOG = SimpleLog.getLog("JDA");
 
-    protected final HashMap<Long, User> users = new HashMap<>(200);
-    protected final HashMap<Long, Guild> guilds = new HashMap<>(10);
-    protected final HashMap<Long, TextChannel> textChannels = new HashMap<>();
-    protected final HashMap<Long, VoiceChannel> voiceChannels = new HashMap<>();
-    protected final HashMap<Long, PrivateChannel> privateChannels = new HashMap<>();
+    protected final TLongObjectMap<User> users = MiscUtil.newLongMap();
+    protected final TLongObjectMap<Guild> guilds = MiscUtil.newLongMap();
+    protected final TLongObjectMap<TextChannel> textChannels = MiscUtil.newLongMap();
+    protected final TLongObjectMap<VoiceChannel> voiceChannels = MiscUtil.newLongMap();
+    protected final TLongObjectMap<PrivateChannel> privateChannels = MiscUtil.newLongMap();
 
-    protected final HashMap<Long, User> fakeUsers = new HashMap<>();
-    protected final HashMap<Long, PrivateChannel> fakePrivateChannels = new HashMap<>();
+    protected final TLongObjectMap<User> fakeUsers = MiscUtil.newLongMap();
+    protected final TLongObjectMap<PrivateChannel> fakePrivateChannels = MiscUtil.newLongMap();
 
-    protected final HashMap<Long, AudioManager> audioManagers = new HashMap<>();
+    protected final TLongObjectMap<AudioManager> audioManagers = MiscUtil.newLongMap();
 
     protected final AccountType accountType;
     protected final PresenceImpl presence;
@@ -306,7 +308,7 @@ public class JDAImpl implements JDA
     @Override
     public List<User> getUsers()
     {
-        return Collections.unmodifiableList(new ArrayList<>(users.values()));
+        return Collections.unmodifiableList(new ArrayList<>(users.valueCollection()));
     }
 
     @Override
@@ -324,7 +326,7 @@ public class JDAImpl implements JDA
     @Override
     public List<User> getUsersByName(String name, boolean ignoreCase)
     {
-        return users.values().stream().filter(u ->
+        return users.valueCollection().stream().filter(u ->
             ignoreCase
             ? name.equalsIgnoreCase(u.getName())
             : name.equals(u.getName()))
@@ -363,7 +365,7 @@ public class JDAImpl implements JDA
     @Override
     public List<Guild> getGuilds()
     {
-        return Collections.unmodifiableList(new ArrayList<>(guilds.values()));
+        return Collections.unmodifiableList(new ArrayList<>(guilds.valueCollection()));
     }
 
     @Override
@@ -381,7 +383,7 @@ public class JDAImpl implements JDA
     @Override
     public List<Guild> getGuildsByName(String name, boolean ignoreCase)
     {
-        return guilds.values().stream().filter(g ->
+        return guilds.valueCollection().stream().filter(g ->
                 ignoreCase
                         ? name.equalsIgnoreCase(g.getName())
                         : name.equals(g.getName()))
@@ -389,9 +391,43 @@ public class JDAImpl implements JDA
     }
 
     @Override
+    public List<Role> getRoles()
+    {
+        List<Role> roles = new ArrayList<>();
+        guilds.forEachValue(guild -> roles.addAll(guild.getRoles()));
+        return Collections.unmodifiableList(roles);
+    }
+
+    @Override
+    public Role getRoleById(String id)
+    {
+        return getRoleById(Long.parseLong(id));
+    }
+
+    @Override
+    public Role getRoleById(long id)
+    {
+        for (Guild guild : guilds.valueCollection())
+        {
+            Role r = guild.getRoleById(id);
+            if (r != null)
+                return r;
+        }
+        return null;
+    }
+
+    @Override
+    public List<Role> getRolesByName(String name, boolean ignoreCase)
+    {
+        List<Role> roles = new ArrayList<>();
+        guilds.forEachValue(guild -> roles.addAll(guild.getRolesByName(name, ignoreCase)));
+        return roles;
+    }
+
+    @Override
     public List<TextChannel> getTextChannels()
     {
-        return Collections.unmodifiableList(new ArrayList<>(textChannels.values()));
+        return Collections.unmodifiableList(new ArrayList<>(textChannels.valueCollection()));
     }
 
     @Override
@@ -409,7 +445,7 @@ public class JDAImpl implements JDA
     @Override
     public List<TextChannel> getTextChannelsByName(String name, boolean ignoreCase)
     {
-        return textChannels.values().stream().filter(tc ->
+        return textChannels.valueCollection().stream().filter(tc ->
                 ignoreCase
                         ? name.equalsIgnoreCase(tc.getName())
                         : name.equals(tc.getName()))
@@ -419,7 +455,7 @@ public class JDAImpl implements JDA
     @Override
     public List<VoiceChannel> getVoiceChannels()
     {
-        return Collections.unmodifiableList(new ArrayList<>(voiceChannels.values()));
+        return Collections.unmodifiableList(new ArrayList<>(voiceChannels.valueCollection()));
     }
 
     @Override
@@ -437,7 +473,7 @@ public class JDAImpl implements JDA
     @Override
     public List<VoiceChannel> getVoiceChannelByName(String name, boolean ignoreCase)
     {
-        return voiceChannels.values().stream().filter(vc ->
+        return voiceChannels.valueCollection().stream().filter(vc ->
                 ignoreCase
                         ? name.equalsIgnoreCase(vc.getName())
                         : name.equals(vc.getName()))
@@ -447,7 +483,7 @@ public class JDAImpl implements JDA
     @Override
     public List<PrivateChannel> getPrivateChannels()
     {
-        return Collections.unmodifiableList(new ArrayList<>(privateChannels.values()));
+        return Collections.unmodifiableList(new ArrayList<>(privateChannels.valueCollection()));
     }
 
     @Override
@@ -466,7 +502,7 @@ public class JDAImpl implements JDA
     public List<Emote> getEmotes()
     {
         List<Emote> emotes = new ArrayList<>();
-        getGuilds().parallelStream().forEach(g -> emotes.addAll(g.getEmotes()));
+        guilds.forEachValue(guild -> emotes.addAll(guild.getEmotes()));
         return Collections.unmodifiableList(emotes);
     }
 
@@ -474,7 +510,7 @@ public class JDAImpl implements JDA
     public List<Emote> getEmotesByName(String name, boolean ignoreCase)
     {
         List<Emote> emotes = new ArrayList<>();
-        getGuilds().parallelStream().forEach(g -> emotes.addAll(g.getEmotesByName(name, ignoreCase)));
+        guilds.forEachValue(guild -> emotes.addAll(guild.getEmotesByName(name, ignoreCase)));
         return Collections.unmodifiableList(emotes);
     }
 
@@ -513,7 +549,7 @@ public class JDAImpl implements JDA
     {
         setStatus(Status.SHUTTING_DOWN);
         getRequester().shutdown();
-        audioManagers.forEach((guildId, mng) -> mng.closeAudioConnection());
+        audioManagers.valueCollection().forEach(AudioManager::closeAudioConnection);
         if (AudioWebSocket.KEEP_ALIVE_POOLS.containsKey(this))
             AudioWebSocket.KEEP_ALIVE_POOLS.get(this).shutdownNow();
         getClient().setAutoReconnect(false);
@@ -535,7 +571,7 @@ public class JDAImpl implements JDA
     {
         setStatus(Status.SHUTTING_DOWN);
         List<IBucket> buckets = getRequester().shutdownNow();
-        audioManagers.forEach((guildId, mng) -> mng.closeAudioConnection());
+        audioManagers.valueCollection().forEach(AudioManager::closeAudioConnection);
         if (AudioWebSocket.KEEP_ALIVE_POOLS.containsKey(this))
             AudioWebSocket.KEEP_ALIVE_POOLS.get(this).shutdownNow();
         getClient().setAutoReconnect(false);
@@ -653,42 +689,42 @@ public class JDAImpl implements JDA
         return client;
     }
 
-    public HashMap<Long, User> getUserMap()
+    public TLongObjectMap<User> getUserMap()
     {
         return users;
     }
 
-    public HashMap<Long, Guild> getGuildMap()
+    public TLongObjectMap<Guild> getGuildMap()
     {
         return guilds;
     }
 
-    public HashMap<Long, TextChannel> getTextChannelMap()
+    public TLongObjectMap<TextChannel> getTextChannelMap()
     {
         return textChannels;
     }
 
-    public HashMap<Long, VoiceChannel> getVoiceChannelMap()
+    public TLongObjectMap<VoiceChannel> getVoiceChannelMap()
     {
         return voiceChannels;
     }
 
-    public HashMap<Long, PrivateChannel> getPrivateChannelMap()
+    public TLongObjectMap<PrivateChannel> getPrivateChannelMap()
     {
         return privateChannels;
     }
 
-    public HashMap<Long, User> getFakeUserMap()
+    public TLongObjectMap<User> getFakeUserMap()
     {
         return fakeUsers;
     }
 
-    public HashMap<Long, PrivateChannel> getFakePrivateChannelMap()
+    public TLongObjectMap<PrivateChannel> getFakePrivateChannelMap()
     {
         return fakePrivateChannels;
     }
 
-    public HashMap<Long, AudioManager> getAudioManagerMap()
+    public TLongObjectMap<AudioManager> getAudioManagerMap()
     {
         return audioManagers;
     }

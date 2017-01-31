@@ -16,6 +16,7 @@
 
 package net.dv8tion.jda.client.handle;
 
+import gnu.trove.map.TLongObjectMap;
 import net.dv8tion.jda.client.entities.CallUser;
 import net.dv8tion.jda.client.entities.CallableChannel;
 import net.dv8tion.jda.client.entities.Group;
@@ -32,8 +33,6 @@ import net.dv8tion.jda.core.handle.SocketHandler;
 import net.dv8tion.jda.core.requests.WebSocketClient;
 import org.json.JSONArray;
 import org.json.JSONObject;
-
-import java.util.HashMap;
 
 public class CallCreateHandler extends SocketHandler
 {
@@ -63,7 +62,7 @@ public class CallCreateHandler extends SocketHandler
 
         CallImpl call = new CallImpl(channel, messageId);
         call.setRegion(region);
-        HashMap<Long, CallUser> callUsers = call.getCallUserMap();
+        TLongObjectMap<CallUser> callUsers = call.getCallUserMap();
 
         if (channel instanceof Group)
         {
@@ -71,7 +70,7 @@ public class CallCreateHandler extends SocketHandler
             if (group.getCurrentCall() != null)
                 WebSocketClient.LOG.fatal("Received a CALL_CREATE for a Group that already has an active call cached! JSON: " + content);
             group.setCurrentCall(call);
-            group.getUserMap().forEach((userId, user) ->
+            group.getUserMap().forEachEntry((userId, user) ->
             {
                 CallUserImpl callUser = new CallUserImpl(call, user);
                 callUsers.put(userId, callUser);
@@ -85,6 +84,8 @@ public class CallCreateHandler extends SocketHandler
                         break;
                     }
                 }
+
+                return true;
             });
         }
         else
