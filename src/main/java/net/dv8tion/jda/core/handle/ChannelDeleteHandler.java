@@ -45,10 +45,12 @@ public class ChannelDeleteHandler extends SocketHandler
     protected Long handleInternally(JSONObject content)
     {
         ChannelType type = ChannelType.fromId(content.getInt("type"));
-        final long guildId = Long.parseLong(content.getString("guild_id"));
+
+        long guildId = 0;
         final long channelId = Long.parseLong(content.getString("id"));
-        if (type == ChannelType.TEXT || type == ChannelType.VOICE)
+        if (type.isGuild())
         {
+            guildId = Long.parseLong(content.getString("guild_id"));
             if (GuildLock.get(api).isLocked(guildId))
                 return guildId;
         }

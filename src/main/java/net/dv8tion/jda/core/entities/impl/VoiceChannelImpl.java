@@ -16,6 +16,7 @@
 
 package net.dv8tion.jda.core.entities.impl;
 
+import gnu.trove.map.TLongObjectMap;
 import net.dv8tion.jda.core.JDA;
 import net.dv8tion.jda.core.Permission;
 import net.dv8tion.jda.core.entities.EntityBuilder;
@@ -33,6 +34,7 @@ import net.dv8tion.jda.core.requests.Response;
 import net.dv8tion.jda.core.requests.RestAction;
 import net.dv8tion.jda.core.requests.Route;
 import net.dv8tion.jda.core.requests.restaction.InviteAction;
+import net.dv8tion.jda.core.utils.MiscUtil;
 import org.apache.http.util.Args;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -50,7 +52,7 @@ public class VoiceChannelImpl implements VoiceChannel
 
     private final HashMap<Member, PermissionOverride> memberOverrides = new HashMap<>();
     private final HashMap<Role, PermissionOverride> roleOverrides = new HashMap<>();
-    private final HashMap<Long, Member> connectedMembers = new HashMap<>();
+    private final TLongObjectMap<Member> connectedMembers = MiscUtil.newLongMap();
 
     private volatile ChannelManager manager;
     private volatile ChannelManagerUpdatable managerUpdatable;
@@ -94,7 +96,7 @@ public class VoiceChannelImpl implements VoiceChannel
     @Override
     public List<Member> getMembers()
     {
-        return Collections.unmodifiableList(new ArrayList<>(connectedMembers.values()));
+        return Collections.unmodifiableList(new ArrayList<>(connectedMembers.valueCollection()));
     }
 
     @Override
@@ -363,7 +365,7 @@ public class VoiceChannelImpl implements VoiceChannel
         return roleOverrides;
     }
 
-    public HashMap<Long, Member> getConnectedMembersMap()
+    public TLongObjectMap<Member> getConnectedMembersMap()
     {
         return connectedMembers;
     }

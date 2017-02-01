@@ -16,13 +16,14 @@
 
 package net.dv8tion.jda.client.entities.impl;
 
-import gnu.trove.map.hash.TLongObjectHashMap;
+import gnu.trove.map.TLongObjectMap;
 import net.dv8tion.jda.client.entities.Call;
 import net.dv8tion.jda.client.entities.CallUser;
 import net.dv8tion.jda.client.entities.CallableChannel;
 import net.dv8tion.jda.client.entities.Group;
 import net.dv8tion.jda.core.Region;
 import net.dv8tion.jda.core.entities.PrivateChannel;
+import net.dv8tion.jda.core.utils.MiscUtil;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,8 +35,8 @@ public class CallImpl implements Call
     private final CallableChannel callableChannel;
     private final long messageId;
 
-    private TLongObjectHashMap<CallUser> callUsers = new TLongObjectHashMap<>();
-    private TLongObjectHashMap<CallUser> callUserHistory = new TLongObjectHashMap<>();
+    private TLongObjectMap<CallUser> callUsers = MiscUtil.newLongMap();
+    private TLongObjectMap<CallUser> callUserHistory = MiscUtil.newLongMap();
 
     private Region region;
 
@@ -157,12 +158,12 @@ public class CallImpl implements Call
         return this;
     }
 
-    public TLongObjectHashMap<CallUser> getCallUserMap()
+    public TLongObjectMap<CallUser> getCallUserMap()
     {
         return callUsers;
     }
 
-    public TLongObjectHashMap<CallUser> getCallUserHistoryMap()
+    public TLongObjectMap<CallUser> getCallUserHistoryMap()
     {
         return callUserHistory;
     }

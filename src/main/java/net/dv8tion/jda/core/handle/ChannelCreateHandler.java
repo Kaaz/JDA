@@ -38,12 +38,12 @@ public class ChannelCreateHandler extends SocketHandler
     {
         ChannelType type = ChannelType.fromId(content.getInt("type"));
 
-        long id = 0;
-        if (type == ChannelType.TEXT || type == ChannelType.VOICE)
+        long guildId = 0;
+        if (type.isGuild())
         {
-            id = Long.parseLong(content.getString("guild_id"));
-            if (GuildLock.get(api).isLocked(id))
-                return id;
+            guildId = Long.parseLong(content.getString("guild_id"));
+            if (GuildLock.get(api).isLocked(guildId))
+                return guildId;
         }
 
         switch (type)
@@ -53,7 +53,7 @@ public class ChannelCreateHandler extends SocketHandler
                 api.getEventManager().handle(
                         new TextChannelCreateEvent(
                                 api, responseNumber,
-                                EntityBuilder.get(api).createTextChannel(content, id)));
+                                EntityBuilder.get(api).createTextChannel(content, guildId)));
                 break;
             }
             case VOICE:
@@ -61,7 +61,7 @@ public class ChannelCreateHandler extends SocketHandler
                 api.getEventManager().handle(
                         new VoiceChannelCreateEvent(
                                 api, responseNumber,
-                                EntityBuilder.get(api).createVoiceChannel(content, id)));
+                                EntityBuilder.get(api).createVoiceChannel(content, guildId)));
                 break;
             }
             case PRIVATE:

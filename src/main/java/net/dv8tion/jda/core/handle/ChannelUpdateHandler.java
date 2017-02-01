@@ -85,10 +85,7 @@ public class ChannelUpdateHandler extends SocketHandler
                 TextChannelImpl channel = (TextChannelImpl) api.getTextChannelMap().get(channelId);
                 if (channel == null)
                 {
-                    EventCache.get(api).cache(EventCache.Type.CHANNEL, channelId, () ->
-                    {
-                        handle(responseNumber, allContent);
-                    });
+                    EventCache.get(api).cache(EventCache.Type.CHANNEL, channelId, () -> handle(responseNumber, allContent));
                     EventCache.LOG.debug("CHANNEL_UPDATE attemped to update a TextChannel that does not exist. JSON: " + content);
                     return null;
                 }
@@ -163,10 +160,7 @@ public class ChannelUpdateHandler extends SocketHandler
                 int bitrate = content.getInt("bitrate");
                 if (channel == null)
                 {
-                    EventCache.get(api).cache(EventCache.Type.CHANNEL, channelId, () ->
-                    {
-                        handle(responseNumber, allContent);
-                    });
+                    EventCache.get(api).cache(EventCache.Type.CHANNEL, channelId, () -> handle(responseNumber, allContent));
                     EventCache.LOG.debug("CHANNEL_UPDATE attemped to update a VoiceChannel that does not exist. JSON: " + content);
                     return null;
                 }
@@ -338,10 +332,7 @@ public class ChannelUpdateHandler extends SocketHandler
         GroupImpl group = (GroupImpl) api.asClient().getGroupById(content.getString("id"));
         if (group == null)
         {
-            EventCache.get(api).cache(EventCache.Type.CHANNEL, groupId, () ->
-            {
-                handle(responseNumber, allContent);
-            });
+            EventCache.get(api).cache(EventCache.Type.CHANNEL, groupId, () -> handle(responseNumber, allContent));
             EventCache.LOG.debug("Recieved CHANNEL_UPDATE for a group that was not yet cached. JSON: " + content);
             return;
         }
