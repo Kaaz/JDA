@@ -409,7 +409,7 @@ public class MessageReaction
         {
             if (!isEmote())
                 return null;
-            Emote e = api.getEmoteById(getId());
+            Emote e = api.getEmoteById(getIdLong());
             return e != null ? e : new EmoteImpl(id, api).setName(name);
         }
 

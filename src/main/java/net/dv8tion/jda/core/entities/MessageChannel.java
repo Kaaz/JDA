@@ -275,6 +275,11 @@ public interface MessageChannel extends ISnowflake //todo: doc error responses o
      *         <br>The Message defined by the provided id.
      */
     RestAction<Message> getMessageById(String messageId);
+    default RestAction<Message> getMessageById(long messageId)
+    {
+        Args.notNegative(messageId, "Message ID");
+        return getMessageById(String.valueOf(messageId));
+    }
 
     /**
      * Attempts to delete a {@link net.dv8tion.jda.core.entities.Message Message} from the Discord servers that has
@@ -296,6 +301,12 @@ public interface MessageChannel extends ISnowflake //todo: doc error responses o
      * @return {@link net.dv8tion.jda.core.requests.RestAction RestAction} - Type: Void
      */
     RestAction<Void> deleteMessageById(String messageId);
+    //todo docs
+    default RestAction<Void> deleteMessageById(long messageId)
+    {
+        Args.notNegative(messageId, "Message ID");
+        return deleteMessageById(String.valueOf(messageId));
+    }
 
     /**
      * Creates a new {@link MessageHistory MessageHistory} object for each call of this method.
@@ -339,10 +350,17 @@ public interface MessageChannel extends ISnowflake //todo: doc error responses o
                 for (int i = 0; i < historyJson.length(); i++)
                     msgs.add(builder.createMessage(historyJson.getJSONObject(i)));
 
-                msgs.forEach(msg -> mHistory.history.put(msg.getId(), msg));
+                msgs.forEach(msg -> mHistory.history.put(msg.getIdLong(), msg));
                 request.onSuccess(mHistory);
             }
         };
+    }
+
+    //todo docs
+    default RestAction<MessageHistory> getHistoryAround(long messageId, int limit)
+    {
+        Args.notNegative(messageId, "Message ID");
+        return getHistoryAround(String.valueOf(messageId), limit);
     }
 
     /**
@@ -419,6 +437,12 @@ public interface MessageChannel extends ISnowflake //todo: doc error responses o
             }
         };
     }
+    //todo docs
+    default RestAction<Void> addReactionById(long messageId, String unicode)
+    {
+        Args.notNegative(messageId, "Message ID");
+        return addReactionById(String.valueOf(messageId), unicode);
+    }
 
     /**
      * Attempts to react to a message represented by the specified {@code messageId}
@@ -468,6 +492,12 @@ public interface MessageChannel extends ISnowflake //todo: doc error responses o
             }
         };
     }
+    //todo docs
+    default RestAction<Void> addReactionById(long messageId, Emote emote)
+    {
+        Args.notNegative(messageId, "Message ID");
+        return addReactionById(String.valueOf(messageId), emote);
+    }
 
     /**
      * Used to pin a message.
@@ -488,6 +518,12 @@ public interface MessageChannel extends ISnowflake //todo: doc error responses o
      * @return {@link net.dv8tion.jda.core.requests.RestAction RestAction} - Type: Void
      */
     RestAction<Void> pinMessageById(String messageId);
+    //todo docs
+    default RestAction<Void> pinMessageById(long messageId)
+    {
+        Args.notNegative(messageId, "Message ID");
+        return pinMessageById(String.valueOf(messageId));
+    }
 
     /**
      * Used to unpin a message.
@@ -508,6 +544,11 @@ public interface MessageChannel extends ISnowflake //todo: doc error responses o
      * @return {@link net.dv8tion.jda.core.requests.RestAction RestAction} - Type: Void
      */
     RestAction<Void> unpinMessageById(String messageId);
+    //todo docs
+    default RestAction<Void> unpinMessageById(long messageId)
+    {
+        return unpinMessageById(String.valueOf(messageId));
+    }
 
     /**
      * Retrieves a List of {@link net.dv8tion.jda.core.entities.Message Messages} that have been pinned in this channel.
@@ -543,6 +584,11 @@ public interface MessageChannel extends ISnowflake //todo: doc error responses o
      *         <br>The modified Message
      */
     default RestAction<Message> editMessageById(String id, String newContent)
+    {
+        return editMessageById(id, new MessageBuilder().append(newContent).build());
+    }
+    //todo docs
+    default RestAction<Message> editMessageById(long id, String newContent)
     {
         return editMessageById(id, new MessageBuilder().append(newContent).build());
     }
@@ -597,5 +643,11 @@ public interface MessageChannel extends ISnowflake //todo: doc error responses o
                 }
             }
         };
+    }
+    //todo docs
+    default RestAction<Message> editMessageById(long id, Message newContent)
+    {
+        Args.notNegative(id, "Message ID");
+        return editMessageById(String.valueOf(id), newContent);
     }
 }

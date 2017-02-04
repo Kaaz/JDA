@@ -126,7 +126,7 @@ public class InviteImpl implements Invite
         if (this.expanded)
             return new RestAction.EmptyRestAction<>(this);
 
-        final net.dv8tion.jda.core.entities.Guild guild = this.api.getGuildById(this.guild.getId());
+        final net.dv8tion.jda.core.entities.Guild guild = this.api.getGuildById(this.guild.getIdLong());
 
         if (guild == null)
             throw new UnsupportedOperationException("You're not in the guild this invite points to");
@@ -136,8 +136,8 @@ public class InviteImpl implements Invite
         CompiledRoute route;
 
         final net.dv8tion.jda.core.entities.Channel channel = this.channel.getType() == ChannelType.TEXT
-                ? guild.getTextChannelById(this.channel.getId())
-                : guild.getVoiceChannelById(this.channel.getId());
+                ? guild.getTextChannelById(this.channel.getIdLong())
+                : guild.getVoiceChannelById(this.channel.getIdLong());
 
         if (member.hasPermission(channel, Permission.MANAGE_CHANNEL))
         {

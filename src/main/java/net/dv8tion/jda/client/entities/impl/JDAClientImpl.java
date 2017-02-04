@@ -192,7 +192,7 @@ public class JDAClientImpl implements JDAClient
     @Override
     public Friend getFriend(User user)
     {
-        return getFriendById(user.getId());
+        return getFriendById(user.getIdLong());
     }
 
     @Override

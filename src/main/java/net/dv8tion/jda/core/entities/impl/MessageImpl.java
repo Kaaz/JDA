@@ -95,13 +95,13 @@ public class MessageImpl implements Message
     @Override
     public RestAction<Void> pin()
     {
-        return channel.pinMessageById(getId());
+        return channel.pinMessageById(getIdLong());
     }
 
     @Override
     public RestAction<Void> unpin()
     {
-        return channel.unpinMessageById(getId());
+        return channel.unpinMessageById(getIdLong());
     }
 
     @Override
@@ -124,7 +124,7 @@ public class MessageImpl implements Message
             return new RestAction.EmptyRestAction<>(null);
         }
 
-        return channel.addReactionById(getId(), emote);
+        return channel.addReactionById(getIdLong(), emote);
     }
 
     @Override
@@ -139,7 +139,7 @@ public class MessageImpl implements Message
         if (reaction != null && reaction.isSelf())
             return new RestAction.EmptyRestAction<>(null);
 
-        return channel.addReactionById(getId(), unicode);
+        return channel.addReactionById(getIdLong(), unicode);
     }
 
     @Override
@@ -452,7 +452,7 @@ public class MessageImpl implements Message
         if (!api.getSelfUser().equals(getAuthor()))
             throw new IllegalStateException("Attempted to update message that was not sent by this account. You cannot modify other User's messages!");
 
-        return getChannel().editMessageById(getId(), newContent);
+        return getChannel().editMessageById(getIdLong(), newContent);
     }
 
     @Override
@@ -473,7 +473,7 @@ public class MessageImpl implements Message
                     .hasPermission((TextChannel) getChannel(), Permission.MESSAGE_MANAGE))
                 throw new PermissionException(Permission.MESSAGE_MANAGE);
         }
-        return channel.deleteMessageById(getId());
+        return channel.deleteMessageById(getIdLong());
     }
 
     public MessageImpl setPinned(boolean pinned)

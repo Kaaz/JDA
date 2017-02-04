@@ -45,7 +45,7 @@ public interface ISnowflake
     long getIdLong();
 
     /**
-     * The time this entity was created. Calculated through the Snowflake in {@link #getId}.
+     * The time this entity was created. Calculated through the Snowflake in {@link #getIdLong}.
      *
      * @return OffsetDateTime - Time this entity was created at.
      *

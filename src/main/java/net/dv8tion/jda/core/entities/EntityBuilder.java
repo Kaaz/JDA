@@ -168,7 +168,7 @@ public class EntityBuilder
         {
             Role role = createRole(roles.getJSONObject(i), guildObj.getIdLong());
             guildObj.getRolesMap().put(role.getIdLong(), role);
-            if (role.getId().equals(guildObj.getId()))
+            if (role.getIdLong() == guildObj.getIdLong())
                 guildObj.setPublicRole(role);
         }
 
@@ -231,7 +231,7 @@ public class EntityBuilder
                 if (type == ChannelType.TEXT)
                 {
                     TextChannel newChannel = createTextChannel(channel, guildObj.getIdLong());
-                    if (newChannel.getId().equals(guildObj.getId()))
+                    if (newChannel.getIdLong() == guildObj.getIdLong())
                         guildObj.setPublicChannel(newChannel);
                 }
                 else if (type == ChannelType.VOICE)
@@ -1063,7 +1063,7 @@ public class EntityBuilder
         else
             user = createFakeUser(relationshipJson.getJSONObject("user"), true);
 
-        Relationship relationship = api.asClient().getRelationshipById(user.getId(), type);
+        Relationship relationship = api.asClient().getRelationshipById(user.getIdLong(), type);
         if (relationship == null)
         {
             switch (type)

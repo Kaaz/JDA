@@ -791,7 +791,7 @@ public class WebSocketClient extends WebSocketAdapter implements WebSocketListen
                     Guild guild = channel.getGuild();
                     ConnectionListener listener = guild.getAudioManager().getConnectionListener();
 
-                    Guild connGuild = api.getGuildById(guild.getId());
+                    Guild connGuild = api.getGuildById(guild.getIdLong());
                     if (connGuild == null)
                     {
                         it.remove();
@@ -800,7 +800,7 @@ public class WebSocketClient extends WebSocketAdapter implements WebSocketListen
                         continue;
                     }
 
-                    VoiceChannel connChannel = connGuild.getVoiceChannelById(channel.getId());
+                    VoiceChannel connChannel = connGuild.getVoiceChannelById(channel.getIdLong());
                     if (connChannel == null)
                     {
                         it.remove();

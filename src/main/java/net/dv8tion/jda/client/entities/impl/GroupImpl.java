@@ -329,6 +329,13 @@ public class GroupImpl implements Group
     }
 
     @Override
+    public RestAction<Void> deleteMessageById(long messageId)
+    {
+        Args.notNegative(messageId, "Message ID");
+        return deleteMessageById(String.valueOf(messageId));
+    }
+
+    @Override
     public MessageHistory getHistory()
     {
         return new MessageHistory(this);

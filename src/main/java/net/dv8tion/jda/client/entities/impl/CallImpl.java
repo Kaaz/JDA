@@ -119,12 +119,6 @@ public class CallImpl implements Call
     }
 
     @Override
-    public String getId()
-    {
-        return callableChannel.getId();
-    }
-
-    @Override
     public long getIdLong()
     {
         return callableChannel.getIdLong();
@@ -133,7 +127,7 @@ public class CallImpl implements Call
     @Override
     public String toString()
     {
-        return "Call(" + getId() + ")";
+        return "Call(" + getIdLong() + ")";
     }
 
     @Override
@@ -143,7 +137,7 @@ public class CallImpl implements Call
             return false;
 
         Call oCall = (Call) o;
-        return getId().equals(oCall.getId()) && messageId == oCall.getMessageIdLong();
+        return getIdLong() == oCall.getIdLong() && messageId == oCall.getMessageIdLong();
     }
 
     @Override
