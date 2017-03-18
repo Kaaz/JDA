@@ -42,15 +42,14 @@ public class Request<T>
 
     public void onSuccess(T successObj)
     {
-        try
-        {
-            restAction.api.getRequester().callbackPool.submit(() -> onSuccess.accept(successObj));
-        }
-        catch (Throwable t)
-        {
-            RestAction.LOG.fatal("Encountered error while processing success consumer");
-            RestAction.LOG.log(t);
-        }
+        restAction.api.getRequester().callbackPool.submit(() -> {
+            try {
+                onSuccess.accept(successObj);
+            } catch (Throwable t) {
+                RestAction.LOG.fatal("Encountered error while processing success consumer");
+                RestAction.LOG.log(t);
+            }
+        });
     }
 
     public void onFailure(Response response)
@@ -68,15 +67,17 @@ public class Request<T>
 
     public void onFailure(Throwable failException)
     {
-        try
-        {
-            restAction.api.getRequester().callbackPool.submit(() -> onFailure.accept(failException));
-        }
-        catch (Throwable t)
-        {
-            RestAction.LOG.fatal("Encountered error while processing failure consumer");
-            RestAction.LOG.log(t);
-        }
+        restAction.api.getRequester().callbackPool.submit(() ->{
+            try
+            {
+                onFailure.accept(failException);
+            }
+            catch (Throwable t)
+            {
+                RestAction.LOG.fatal("Encountered error while processing failure consumer");
+                RestAction.LOG.log(t);
+            }
+        });
     }
 
     public RestAction<T> getRestAction()
