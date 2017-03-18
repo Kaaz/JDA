@@ -30,10 +30,12 @@ import net.dv8tion.jda.core.entities.impl.JDAImpl;
 import net.dv8tion.jda.core.requests.Route.CompiledRoute;
 import net.dv8tion.jda.core.requests.ratelimit.BotRateLimiter;
 import net.dv8tion.jda.core.requests.ratelimit.ClientRateLimiter;
-import net.dv8tion.jda.core.requests.ratelimit.IBucket;
 import net.dv8tion.jda.core.utils.SimpleLog;
 
-import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Requester
 {
@@ -43,6 +45,9 @@ public class Requester
 
     private final JDAImpl api;
     private final RateLimiter rateLimiter;
+    protected final ExecutorService callbackPool;
+
+
 
     public Requester(JDA api)
     {
@@ -59,6 +64,7 @@ public class Requester
             rateLimiter = new BotRateLimiter(this, 5);
         else
             rateLimiter = new ClientRateLimiter(this, 5);
+        this.callbackPool = Executors.newCachedThreadPool( new RequestCallbackThreadFactory(getJDA()));
     }
 
     public JDAImpl getJDA()
@@ -211,5 +217,24 @@ public class Requester
         request.header("user-agent", USER_AGENT);
         request.header("Accept-Encoding", "gzip");
         return baseRequest;
+    }
+    private class RequestCallbackThreadFactory implements ThreadFactory
+    {
+        final String identifier;
+        AtomicInteger threadCount = new AtomicInteger(1);
+
+        public RequestCallbackThreadFactory(JDAImpl api)
+        {
+            identifier = api.getIdentifierString() + " Request-Callback Pool";
+        }
+
+        @Override
+        public Thread newThread(Runnable r)
+        {
+            Thread t = new Thread(r, identifier + " - Thread " + threadCount.getAndIncrement());
+            t.setDaemon(true);
+
+            return t;
+        }
     }
 }

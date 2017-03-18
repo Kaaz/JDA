@@ -44,7 +44,7 @@ public class Request<T>
     {
         try
         {
-            onSuccess.accept(successObj);
+            restAction.api.getRequester().callbackPool.submit(() -> onSuccess.accept(successObj));
         }
         catch (Throwable t)
         {
@@ -70,7 +70,7 @@ public class Request<T>
     {
         try
         {
-            onFailure.accept(failException);
+            restAction.api.getRequester().callbackPool.submit(() -> onFailure.accept(failException));
         }
         catch (Throwable t)
         {
