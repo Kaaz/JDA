@@ -18,7 +18,6 @@ package net.dv8tion.jda.core.requests;
 
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.http.exceptions.UnirestException;
 import com.mashape.unirest.request.BaseRequest;
 import com.mashape.unirest.request.GetRequest;
 import com.mashape.unirest.request.HttpRequest;
@@ -32,9 +31,7 @@ import net.dv8tion.jda.core.requests.ratelimit.BotRateLimiter;
 import net.dv8tion.jda.core.requests.ratelimit.ClientRateLimiter;
 import net.dv8tion.jda.core.utils.SimpleLog;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Requester
@@ -42,6 +39,7 @@ public class Requester
     public static final SimpleLog LOG = SimpleLog.getLog("JDARequester");
     public static String USER_AGENT = "JDA DiscordBot (" + JDAInfo.GITHUB + ", " + JDAInfo.VERSION + ")";
     public static final String DISCORD_API_PREFIX = "https://discordapp.com/api/";
+    public static final long REQUEST_TIMEOUT = 10L;
 
     private final JDAImpl api;
     private final RateLimiter rateLimiter;
@@ -96,8 +94,7 @@ public class Requester
      * the request can be made again. This could either be for the Per-Route ratelimit or the Global ratelimit.
      * Check if globalCooldown is null to determine if it was Per-Route or Global.
      */
-    public Long execute(Request apiRequest)
-    {
+    public Long execute(Request apiRequest) {
         CompiledRoute route = apiRequest.getRoute();
         Long retryAfter = rateLimiter.getRateLimit(route);
         if (retryAfter != null)
@@ -119,14 +116,15 @@ public class Requester
             request = createRequest(route, bodyData);
         }
 
+        //If the request has been canceled via the Future, don't execute.
+        if (apiRequest.isCanceled())
+            return null;
+
+        Future<HttpResponse<String>> future = request.asStringAsync();
         try
         {
-            //If the request has been canceled via the Future, don't execute.
-            if (apiRequest.isCanceled())
-                return null;
-
-            HttpResponse<String> response = request.asString();
             int attempt = 1;
+            HttpResponse<String> response = future.get(REQUEST_TIMEOUT, TimeUnit.SECONDS);
             while (attempt < 4 && response.getStatus() != 429 && response.getBody() != null && response.getBody().startsWith("<"))
             {
                 LOG.debug(String.format("Requesting %s -> %s returned HTML... retrying (attempt %d)",
@@ -142,7 +140,8 @@ public class Requester
                 //If the request has been canceled via the Future, don't execute.
                 if (apiRequest.isCanceled())
                     return null;
-                response = request.asString();
+                future = request.asStringAsync();
+                response = future.get(REQUEST_TIMEOUT, TimeUnit.SECONDS);
                 attempt++;
             }
             if (response.getBody() != null && response.getBody().startsWith("<"))
@@ -157,10 +156,13 @@ public class Requester
 
             return retryAfter;
         }
-        catch (UnirestException e)
+        catch (TimeoutException | InterruptedException | ExecutionException e)
         {
             LOG.log(e); //This originally only printed on DEBUG in 2.x
             apiRequest.getRestAction().handleResponse(new Response(e), apiRequest);
+            if(!future.isDone() && !future.isCancelled()) {
+                future.cancel(true);
+            }
             return null;
         }
     }
