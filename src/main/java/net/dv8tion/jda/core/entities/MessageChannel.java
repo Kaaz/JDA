@@ -143,7 +143,8 @@ public interface MessageChannel extends ISnowflake
      *         {@link net.dv8tion.jda.core.entities.TextChannel#getGuild() TextChannel.getGuild()}{@link net.dv8tion.jda.core.entities.Guild#checkVerification() .checkVerification()}
      *         returns false.
      * @throws java.lang.IllegalArgumentException
-     *         if the provided embed is null
+     *         if the provided embed is {@code null} or if the provided {@link net.dv8tion.jda.core.entities.MessageEmbed MessageEmbed}
+     *         is not {@link net.dv8tion.jda.core.entities.MessageEmbed#isSendable(net.dv8tion.jda.core.AccountType) sendable}
      *
      * @return {@link net.dv8tion.jda.core.requests.RestAction RestAction} - Type: {@link net.dv8tion.jda.core.entities.Message Message}
      *         <br>The newly created Message after it has been sent to Discord.
@@ -204,7 +205,9 @@ public interface MessageChannel extends ISnowflake
      *         {@link net.dv8tion.jda.core.entities.TextChannel#getGuild() TextChannel.getGuild()}{@link net.dv8tion.jda.core.entities.Guild#checkVerification() .checkVerification()}
      *         returns false.
      * @throws java.lang.IllegalArgumentException
-     *         if the provided message is null
+     *         if the provided message is {@code null} or the provided {@link net.dv8tion.jda.core.entities.Message Message}
+     *         contains an {@link net.dv8tion.jda.core.entities.MessageEmbed MessageEmbed}
+     *         that is not {@link net.dv8tion.jda.core.entities.MessageEmbed#isSendable(net.dv8tion.jda.core.AccountType) sendable}
      *
      * @return {@link net.dv8tion.jda.core.requests.RestAction RestAction} - Type: {@link net.dv8tion.jda.core.entities.Message Message}
      *         <br>The newly created Message after it has been sent to Discord.
@@ -214,6 +217,15 @@ public interface MessageChannel extends ISnowflake
     default RestAction<Message> sendMessage(Message msg)
     {
         Args.notNull(msg, "Message");
+
+        if (!msg.getEmbeds().isEmpty())
+        {
+            AccountType type = getJDA().getAccountType();
+            MessageEmbed embed = msg.getEmbeds().get(0);
+            Args.check(embed.isSendable(type),
+                "Provided Message contains an embed with a length greater than %d characters, which is the max for %s accounts!",
+                    type == AccountType.BOT ? MessageEmbed.EMBED_MAX_LENGTH_BOT : MessageEmbed.EMBED_MAX_LENGTH_CLIENT, type);
+        }
 
         Route.CompiledRoute route = Route.Messages.SEND_MESSAGE.compile(getId());
         JSONObject json = ((MessageImpl) msg).toJSONObject();
@@ -259,6 +271,9 @@ public interface MessageChannel extends ISnowflake
      *             <li>Provided {@code file} does not exist.</li>
      *             <li>Provided {@code file} is unreadable.</li>
      *             <li>Provided {@code file} is greater than 8MB.</li>
+     *             <li>Provided {@link net.dv8tion.jda.core.entities.Message Message} is not {@code null} <b>and</b>
+     *                 contains a {@link net.dv8tion.jda.core.entities.MessageEmbed MessageEmbed} which
+     *                 is not {@link net.dv8tion.jda.core.entities.MessageEmbed#isSendable(net.dv8tion.jda.core.AccountType) sendable}</li>
      *         </ul>
      * @throws net.dv8tion.jda.core.exceptions.PermissionException
      *         If this is a {@link net.dv8tion.jda.core.entities.TextChannel TextChannel} and the logged in account does not have
@@ -334,6 +349,9 @@ public interface MessageChannel extends ISnowflake
      *             <li>Provided {@code file} does not exist.</li>
      *             <li>Provided {@code file} is unreadable.</li>
      *             <li>Provided {@code file} is greater than 8MB.</li>
+     *             <li>Provided {@link net.dv8tion.jda.core.entities.Message Message} is not {@code null} <b>and</b>
+     *                 contains a {@link net.dv8tion.jda.core.entities.MessageEmbed MessageEmbed} which
+     *                 is not {@link net.dv8tion.jda.core.entities.MessageEmbed#isSendable(net.dv8tion.jda.core.AccountType) sendable}</li>
      *         </ul>
      * @throws net.dv8tion.jda.core.exceptions.PermissionException
      *         If this is a {@link net.dv8tion.jda.core.entities.TextChannel TextChannel} and the logged in account does not have
@@ -350,10 +368,10 @@ public interface MessageChannel extends ISnowflake
     {
         Args.notNull(file, "file");
 
-        if(file == null || !file.exists() || !file.canRead())
-            throw new IllegalArgumentException("Provided file is either null, doesn't exist or is not readable!");
-        if (file.length() > 8<<20)   //8MB, TODO: deal with Discord Nitro allowing 50MB files.
-            throw new IllegalArgumentException("File is to big! Max file-size is 8MB");
+        Args.check(file.exists() && file.canRead(),
+            "Provided file is either null, doesn't exist or is not readable!");
+        Args.check(file.length() <= 8<<20,   //8MB, TODO: deal with Discord Nitro allowing 50MB files.
+            "File is to big! Max file-size is 8MB");
 
         return sendFile(IOUtil.readFully(file), fileName, message);
     }
@@ -402,8 +420,16 @@ public interface MessageChannel extends ISnowflake
 
         if (message != null)
         {
-            body.field("content", message.getRawContent());
-            body.field("tts", message.isTTS());
+            if (!message.getEmbeds().isEmpty())
+            {
+                AccountType type = getJDA().getAccountType();
+                MessageEmbed embed = message.getEmbeds().get(0);
+                Args.check(embed.isSendable(type),
+                        "Provided Message contains an embed with a length greater than %d characters, which is the max for %s accounts!",
+                        type == AccountType.BOT ? MessageEmbed.EMBED_MAX_LENGTH_BOT : MessageEmbed.EMBED_MAX_LENGTH_CLIENT, type);
+            }
+
+            body.field("payload_json", ((MessageImpl) message).toJSONObject().toString());
         }
 
         return new RestAction<Message>(getJDA(), route, body)
@@ -438,7 +464,12 @@ public interface MessageChannel extends ISnowflake
      *         The message to be sent along with the uploaded file. This value can be {@code null}.
      *
      * @throws java.lang.IllegalArgumentException
-     *         If the provided filename is {@code null} or {@code empty} or the provided data is larger than 8MB.
+     *         <ul>
+     *             <li>If the provided filename is {@code null} or {@code empty} or the provided data is larger than 8MB.</li>
+     *             <li>If the provided {@link net.dv8tion.jda.core.entities.Message Message}
+     *                 contains an {@link net.dv8tion.jda.core.entities.MessageEmbed MessageEmbed}
+     *                 that is not {@link net.dv8tion.jda.core.entities.MessageEmbed#isSendable(net.dv8tion.jda.core.AccountType) sendable}</li>
+     *         </ul>
      * @throws net.dv8tion.jda.core.exceptions.PermissionException
      *         If this is a {@link net.dv8tion.jda.core.entities.TextChannel TextChannel} and the logged in account does not have
      *         <ul>
@@ -455,8 +486,8 @@ public interface MessageChannel extends ISnowflake
         Args.notNull(data, "file data[]");
         Args.notNull(fileName, "fileName");
 
-        if (data.length > 8<<20)   //8MB
-            throw new IllegalArgumentException("Provided data is too large! Max file-size is 8MB");
+        Args.check(data.length <= 8<<20,   //8MB
+            "Provided data is too large! Max file-size is 8MB");
 
         Route.CompiledRoute route = Route.Messages.SEND_MESSAGE.compile(getId());
         MultipartBody body = Unirest.post(Requester.DISCORD_API_PREFIX + route.getCompiledRoute())
@@ -466,8 +497,16 @@ public interface MessageChannel extends ISnowflake
 
         if (message != null)
         {
-            body.field("content", message.getRawContent());
-            body.field("tts", message.isTTS());
+            if (!message.getEmbeds().isEmpty())
+            {
+                AccountType type = getJDA().getAccountType();
+                MessageEmbed embed = message.getEmbeds().get(0);
+                Args.check(embed.isSendable(type),
+                        "Provided Message contains an embed with a length greater than %d characters, which is the max for %s accounts!",
+                        type == AccountType.BOT ? MessageEmbed.EMBED_MAX_LENGTH_BOT : MessageEmbed.EMBED_MAX_LENGTH_CLIENT, type);
+            }
+
+            body.field("payload_json", ((MessageImpl) message).toJSONObject().toString());
         }
 
         return new RestAction<Message>(getJDA(), route, body)
@@ -742,7 +781,7 @@ public interface MessageChannel extends ISnowflake
     default RestAction<MessageHistory> getHistoryAround(String messageId, int limit)
     {
         Args.notEmpty(messageId, "Provided messageId");
-        Args.check(limit > 100 || limit < 1, "Provided limit was out of bounds. Minimum: 1, Max: 100. Provided: %d", limit);
+        Args.check(limit >= 1 && limit <= 100, "Provided limit was out of bounds. Minimum: 1, Max: 100. Provided: %d", limit);
 
         Route.CompiledRoute route = Route.Messages.GET_MESSAGE_HISTORY_AROUND.compile(this.getId(), Integer.toString(limit), messageId);
         return new RestAction<MessageHistory>(getJDA(), route, null)
@@ -835,7 +874,9 @@ public interface MessageChannel extends ISnowflake
      *     <br>The request was attempted after the account lost access to the
      *         {@link net.dv8tion.jda.core.entities.Guild Guild} or {@link net.dv8tion.jda.client.entities.Group Group}
      *         typically due to being kicked or removed, or after {@link net.dv8tion.jda.core.Permission#MESSAGE_READ Permission.MESSAGE_READ}
-     *         was revoked in the {@link net.dv8tion.jda.core.entities.TextChannel TextChannel}</li>
+     *         was revoked in the {@link net.dv8tion.jda.core.entities.TextChannel TextChannel}
+     *     <br>Also can happen if the account lost the {@link net.dv8tion.jda.core.Permission#MESSAGE_HISTORY Permission.MESSAGE_HISTORY}</li>
+     *
      *
      *     <li>{@link net.dv8tion.jda.core.requests.ErrorResponse#MISSING_PERMISSIONS MISSING_PERMISSIONS}
      *     <br>The request was attempted after the account lost
@@ -866,9 +907,12 @@ public interface MessageChannel extends ISnowflake
      *             <li>If provided {@code messageId} is {@code null} or empty.</li>
      *         </ul>
      * @throws net.dv8tion.jda.core.exceptions.PermissionException
-     *         If this is a {@link net.dv8tion.jda.core.entities.TextChannel TextChannel} and the currently logged
-     *         in account does not have {@link net.dv8tion.jda.core.Permission#MESSAGE_ADD_REACTION Permission.MESSAGE_ADD_REACTION}
-     *         in this channel.
+     *         If the MessageChannel this message was sent in was a {@link net.dv8tion.jda.core.entities.TextChannel TextChannel}
+     *         and the logged in account does not have
+     *         <ul>
+     *             <li>{@link net.dv8tion.jda.core.Permission#MESSAGE_ADD_REACTION Permission.MESSAGE_ADD_REACTION}</li>
+     *             <li>{@link net.dv8tion.jda.core.Permission#MESSAGE_HISTORY Permission.MESSAGE_HISTORY}</li>
+     *         </ul>
      *
      * @return {@link net.dv8tion.jda.core.requests.RestAction} - Type: Void
      */
@@ -914,7 +958,9 @@ public interface MessageChannel extends ISnowflake
      *     <br>The request was attempted after the account lost access to the
      *         {@link net.dv8tion.jda.core.entities.Guild Guild} or {@link net.dv8tion.jda.client.entities.Group Group}
      *         typically due to being kicked or removed, or after {@link net.dv8tion.jda.core.Permission#MESSAGE_READ Permission.MESSAGE_READ}
-     *         was revoked in the {@link net.dv8tion.jda.core.entities.TextChannel TextChannel}</li>
+     *         was revoked in the {@link net.dv8tion.jda.core.entities.TextChannel TextChannel}
+     *     <br>Also can happen if the account lost the {@link net.dv8tion.jda.core.Permission#MESSAGE_HISTORY Permission.MESSAGE_HISTORY}</li>
+     *
      *
      *     <li>{@link net.dv8tion.jda.core.requests.ErrorResponse#MISSING_PERMISSIONS MISSING_PERMISSIONS}
      *     <br>The request was attempted after the account lost
@@ -944,9 +990,12 @@ public interface MessageChannel extends ISnowflake
      *             <li>If provided {@code emote} is {@code null}</li>
      *         </ul>
      * @throws net.dv8tion.jda.core.exceptions.PermissionException
-     *         If this is a {@link net.dv8tion.jda.core.entities.TextChannel TextChannel} and the currently logged
-     *         in account does not have {@link net.dv8tion.jda.core.Permission#MESSAGE_ADD_REACTION Permission.MESSAGE_ADD_REACTION}
-     *         in this channel.
+     *         If the MessageChannel this message was sent in was a {@link net.dv8tion.jda.core.entities.TextChannel TextChannel}
+     *         and the logged in account does not have
+     *         <ul>
+     *             <li>{@link net.dv8tion.jda.core.Permission#MESSAGE_ADD_REACTION Permission.MESSAGE_ADD_REACTION}</li>
+     *             <li>{@link net.dv8tion.jda.core.Permission#MESSAGE_HISTORY Permission.MESSAGE_HISTORY}</li>
+     *         </ul>
      *
      * @return {@link net.dv8tion.jda.core.requests.RestAction} - Type: Void
      */
@@ -1215,6 +1264,9 @@ public interface MessageChannel extends ISnowflake
      *         <ul>
      *             <li>If provided {@code messageId} is {@code null} or empty.</li>
      *             <li>If provided {@code newContent} is {@code null}.</li>
+     *             <li>If provided {@link net.dv8tion.jda.core.entities.Message Message}
+     *                 contains a {@link net.dv8tion.jda.core.entities.MessageEmbed MessageEmbed} which
+     *                 is not {@link net.dv8tion.jda.core.entities.MessageEmbed#isSendable(net.dv8tion.jda.core.AccountType) sendable}</li>
      *         </ul>
      * @throws net.dv8tion.jda.core.exceptions.PermissionException
      *         If this is a TextChannel and this account does not have
@@ -1228,6 +1280,14 @@ public interface MessageChannel extends ISnowflake
         Args.notEmpty(messageId, "messageId");
         Args.notNull(newContent, "message");
 
+        if (!newContent.getEmbeds().isEmpty())
+        {
+            AccountType type = getJDA().getAccountType();
+            MessageEmbed embed = newContent.getEmbeds().get(0);
+            Args.check(embed.isSendable(type),
+                    "Provided Message contains an embed with a length greater than %d characters, which is the max for %s accounts!",
+                    type == AccountType.BOT ? MessageEmbed.EMBED_MAX_LENGTH_BOT : MessageEmbed.EMBED_MAX_LENGTH_CLIENT, type);
+        }
         JSONObject json = ((MessageImpl) newContent).toJSONObject();
         Route.CompiledRoute route = Route.Messages.EDIT_MESSAGE.compile(getId(), messageId);
         return new RestAction<Message>(getJDA(), route, json)
@@ -1246,5 +1306,54 @@ public interface MessageChannel extends ISnowflake
                 }
             }
         };
+    }
+
+    /**
+     * Attempts to edit a message by its id in this MessageChannel.
+     *
+     * <p>The following {@link net.dv8tion.jda.core.requests.ErrorResponse ErrorResponses} are possible:
+     * <ul>
+     *     <li>{@link net.dv8tion.jda.core.requests.ErrorResponse#INVALID_AUTHOR_EDIT INVALID_AUTHOR_EDIT}
+     *     <br>Attempted to edit a message that was not sent by the currently logged in account.
+     *         Discord does not allow editing of other users' Messages!</li>
+     *
+     *     <li>{@link net.dv8tion.jda.core.requests.ErrorResponse#MISSING_ACCESS MISSING_ACCESS}
+     *     <br>The request was attempted after the account lost access to the
+     *         {@link net.dv8tion.jda.core.entities.Guild Guild} or {@link net.dv8tion.jda.client.entities.Group Group}
+     *         typically due to being kicked or removed, or after {@link net.dv8tion.jda.core.Permission#MESSAGE_READ Permission.MESSAGE_READ}
+     *         was revoked in the {@link net.dv8tion.jda.core.entities.TextChannel TextChannel}</li>
+     *
+     *     <li>{@link net.dv8tion.jda.core.requests.ErrorResponse#UNKNOWN_MESSAGE UNKNOWN_MESSAGE}
+     *     <br>The provided {@code messageId} is unknown in this MessageChannel, either due to the id being invalid, or
+     *         the message it referred to has already been deleted.</li>
+     *
+     *     <li>{@link net.dv8tion.jda.core.requests.ErrorResponse#UNKNOWN_CHANNEL UNKNOWN_CHANNEL}
+     *     <br>The request was attempted after the channel was deleted.</li>
+     * </ul>
+     *
+     * @param  messageId
+     *         The id referencing the Message that should be edited
+     * @param  newEmbed
+     *         The new {@link net.dv8tion.jda.core.entities.MessageEmbed MessageEmbed} for the edited message
+     *
+     * @throws IllegalArgumentException
+     *         <ul>
+     *             <li>If provided {@code messageId} is {@code null} or empty.</li>
+     *             <li>If provided {@link net.dv8tion.jda.core.entities.MessageEmbed MessageEmbed}
+     *                 is not {@link net.dv8tion.jda.core.entities.MessageEmbed#isSendable(net.dv8tion.jda.core.AccountType) sendable}</li>
+     *         </ul>
+     * @throws IllegalStateException
+     *         If the provided MessageEmbed is {@code null}
+     * @throws net.dv8tion.jda.core.exceptions.PermissionException
+     *         If this is a TextChannel and this account does not have
+     *         {@link net.dv8tion.jda.core.Permission#MESSAGE_READ Permission.MESSAGE_READ}
+     *         or {@link net.dv8tion.jda.core.Permission#MESSAGE_WRITE Permission.MESSAGE_WRITE}
+     *
+     * @return {@link net.dv8tion.jda.core.requests.RestAction RestAction} - Type: {@link net.dv8tion.jda.core.entities.Message}
+     *         <br>The modified Message
+     */
+    default RestAction<Message> editMessageById(String messageId, MessageEmbed newEmbed)
+    {
+        return editMessageById(messageId, new MessageBuilder().setEmbed(newEmbed).build());
     }
 }

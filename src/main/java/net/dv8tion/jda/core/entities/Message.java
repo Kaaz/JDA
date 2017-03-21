@@ -292,7 +292,7 @@ public interface Message extends ISnowflake
      *         the {@link net.dv8tion.jda.core.entities.TextChannel TextChannel}.</li>
      *
      *     <li>{@link net.dv8tion.jda.core.requests.ErrorResponse#UNKNOWN_MESSAGE UNKNOWN_MESSAGE}
-     *         The edit was attempted after the Message had been deleted.</li>
+     *     <br>The edit was attempted after the Message had been deleted.</li>
      * </ul>
      *
      * @param  newContent
@@ -302,10 +302,43 @@ public interface Message extends ISnowflake
      *         If the message attempting to be edited was not created by the currently logged in account, or if
      *         {@code newContent}'s length is 0 or greater than 2000.
      *
-     * @return a new Message-Object for the edited message
+     * @return {@link net.dv8tion.jda.core.requests.RestAction RestAction} - Type: {@link net.dv8tion.jda.core.entities.Message Message}
+     *     <br>The {@link net.dv8tion.jda.core.entities.Message Message} with the updated content
      */
     RestAction<Message> editMessage(String newContent);
 
+    /**
+     * Edits this Message's content to the provided {@link net.dv8tion.jda.core.entities.MessageEmbed MessageEmbed}.
+     * <br><b>Messages can only be edited by the account that sent them!</b>.
+     *
+     * <p>The following {@link net.dv8tion.jda.core.requests.ErrorResponse ErrorResponses} are possible:
+     * <ul>
+     *     <li>{@link net.dv8tion.jda.core.requests.ErrorResponse#MISSING_ACCESS MISSING_ACCESS}
+     *     <br>The edit was attempted after the account lost access to the
+     *         {@link net.dv8tion.jda.core.entities.Guild Guild} or {@link net.dv8tion.jda.client.entities.Group Group}
+     *         typically due to being kicked or removed.</li>
+     *
+     *     <li>{@link net.dv8tion.jda.core.requests.ErrorResponse#MISSING_PERMISSIONS MISSING_PERMISSIONS}
+     *     <br>The edit was attempted after the account lost {@link net.dv8tion.jda.core.Permission#MESSAGE_WRITE Permission.MESSAGE_WRITE} in
+     *         the {@link net.dv8tion.jda.core.entities.TextChannel TextChannel}.</li>
+     *
+     *     <li>{@link net.dv8tion.jda.core.requests.ErrorResponse#UNKNOWN_MESSAGE UNKNOWN_MESSAGE}
+     *     <br>The edit was attempted after the Message had been deleted.</li>
+     * </ul>
+     *
+     * @param  newContent
+     *         the new content of the Message
+     *
+     * @throws java.lang.IllegalStateException
+     *         If the message attempting to be edited was not created by the currently logged in account, or
+     *         if the passed-in embed is {@code null}
+     *         or not {@link net.dv8tion.jda.core.entities.MessageEmbed#isSendable(net.dv8tion.jda.core.AccountType) sendable}
+     *
+     * @return {@link net.dv8tion.jda.core.requests.RestAction RestAction} - Type: {@link net.dv8tion.jda.core.entities.Message Message}
+     *     <br>The {@link net.dv8tion.jda.core.entities.Message Message} with the updated content
+     */
+    RestAction<Message> editMessage(MessageEmbed newContent); 
+    
     /**
      * Edits this Message's content to the provided {@link net.dv8tion.jda.core.entities.Message Message}.
      * <br><b>Messages can only be edited by the account that sent them!</b>.
@@ -322,29 +355,23 @@ public interface Message extends ISnowflake
      *         the {@link net.dv8tion.jda.core.entities.TextChannel TextChannel}.</li>
      *
      *     <li>{@link net.dv8tion.jda.core.requests.ErrorResponse#UNKNOWN_MESSAGE UNKNOWN_MESSAGE}
-     *         The edit was attempted after the Message had been deleted.</li>
+     *     <br>The edit was attempted after the Message had been deleted.</li>
      * </ul>
      *
      * @param  newContent
      *         the new content of the Message
      *
      * @throws java.lang.IllegalStateException
-     *         If the message attempting to be edited was not created by the currently logged in account, or if
-     *         {@code newContent}'s length is 0 or greater than 2000.
+     *         <ul>
+     *             <li>If the message attempting to be edited was not created by the currently logged in account</li>
+     *             <li>If the message contains a MessageEmebd that is not
+     *                 {@link net.dv8tion.jda.core.entities.MessageEmbed#isSendable(net.dv8tion.jda.core.AccountType) sendable}</li>
+     *         </ul>
      *
-     * @return a new Message-Object for the edited message
+     * @return {@link net.dv8tion.jda.core.requests.RestAction RestAction} - Type: {@link net.dv8tion.jda.core.entities.Message Message}
+     *     <br>The {@link net.dv8tion.jda.core.entities.Message Message} with the updated content
      */
     RestAction<Message> editMessage(Message newContent);
-
-    /**
-     * Use {@link #delete()} instead.
-     *
-     * @return {@link net.dv8tion.jda.core.requests.RestAction RestAction} - Type: {@link java.lang.Void}
-     *
-     * @deprecated Use {@link #delete()} instead.
-     */
-    @Deprecated
-    RestAction<Void> deleteMessage();
 
     /**
      * Deletes this Message from Discord.
@@ -480,7 +507,8 @@ public interface Message extends ISnowflake
      *     <br>The reaction request was attempted after the account lost access to the {@link net.dv8tion.jda.core.entities.TextChannel TextChannel}
      *         due to {@link net.dv8tion.jda.core.Permission#MESSAGE_READ Permission.MESSAGE_READ} being revoked, or the
      *         account lost access to the {@link net.dv8tion.jda.core.entities.Guild Guild} or {@link net.dv8tion.jda.client.entities.Group Group}
-     *         typically due to being kicked or removed.</li>
+     *         typically due to being kicked or removed.
+     *     <br>Also can happen if the account lost the {@link net.dv8tion.jda.core.Permission#MESSAGE_HISTORY Permission.MESSAGE_HISTORY}</li>
      *
      *     <li>{@link net.dv8tion.jda.core.requests.ErrorResponse#MISSING_PERMISSIONS MISSING_PERMISSIONS}
      *     <br>The reaction request was attempted after the account lost {@link net.dv8tion.jda.core.Permission#MESSAGE_ADD_REACTION Permission.MESSAGE_ADD_REACTION}
@@ -495,8 +523,11 @@ public interface Message extends ISnowflake
      *
      * @throws net.dv8tion.jda.core.exceptions.PermissionException
      *         If the MessageChannel this message was sent in was a {@link net.dv8tion.jda.core.entities.TextChannel TextChannel}
-     *         and the currently logged in account does not have
-     *         {@link net.dv8tion.jda.core.Permission#MESSAGE_ADD_REACTION Permission.MESSAGE_ADD_REACTION} in the channel.
+     *         and the logged in account does not have
+     *         <ul>
+     *             <li>{@link net.dv8tion.jda.core.Permission#MESSAGE_ADD_REACTION Permission.MESSAGE_ADD_REACTION}</li>
+     *             <li>{@link net.dv8tion.jda.core.Permission#MESSAGE_HISTORY Permission.MESSAGE_HISTORY}</li>
+     *         </ul>
      * @throws java.lang.IllegalArgumentException
      *         <ul>
      *             <li>If the provided {@link net.dv8tion.jda.core.entities.Emote Emote} is null.</li>
@@ -525,7 +556,8 @@ public interface Message extends ISnowflake
      *     <br>The reaction request was attempted after the account lost access to the {@link net.dv8tion.jda.core.entities.TextChannel TextChannel}
      *         due to {@link net.dv8tion.jda.core.Permission#MESSAGE_READ Permission.MESSAGE_READ} being revoked, or the
      *         account lost access to the {@link net.dv8tion.jda.core.entities.Guild Guild} or {@link net.dv8tion.jda.client.entities.Group Group}
-     *         typically due to being kicked or removed.</li>
+     *         typically due to being kicked or removed.
+     *     <br>Also can happen if the account lost the {@link net.dv8tion.jda.core.Permission#MESSAGE_HISTORY Permission.MESSAGE_HISTORY}</li>
      *
      *     <li>{@link net.dv8tion.jda.core.requests.ErrorResponse#MISSING_PERMISSIONS MISSING_PERMISSIONS}
      *     <br>The reaction request was attempted after the account lost {@link net.dv8tion.jda.core.Permission#MESSAGE_ADD_REACTION Permission.MESSAGE_ADD_REACTION}
@@ -540,7 +572,12 @@ public interface Message extends ISnowflake
      *
      * @throws net.dv8tion.jda.core.exceptions.PermissionException
      *         If the MessageChannel this message was sent in was a {@link net.dv8tion.jda.core.entities.TextChannel TextChannel}
-     *         and the currently logged in account does not have
+     *         and the logged in account does not have
+     *         <ul>
+     *             <li>{@link net.dv8tion.jda.core.Permission#MESSAGE_ADD_REACTION Permission.MESSAGE_ADD_REACTION}</li>
+     *             <li>{@link net.dv8tion.jda.core.Permission#MESSAGE_HISTORY Permission.MESSAGE_HISTORY}</li>
+     *         </ul>
+     *
      *         {@link net.dv8tion.jda.core.Permission#MESSAGE_ADD_REACTION Permission.MESSAGE_ADD_REACTION} in the channel.
      * @throws java.lang.IllegalArgumentException
      *         If the provided unicode emoji is null or empty.
@@ -641,7 +678,8 @@ public interface Message extends ISnowflake
 
         /**
          * The url of the Attachment, proxied by Discord.
-         * <br>The point of this URL is to prevent IP scraping when downloading attachments from Discord.
+         * <br>Url to the resource proxied by https://images.discordapp.net
+         * <br><b>Note: </b> This URL will most likely only work for images. ({@link #isImage()})
          *
          * @return Non-null String containing the proxied Attachment url.
          */
@@ -673,7 +711,7 @@ public interface Message extends ISnowflake
             InputStream in = null;
             try
             {
-                URL url = new URL(getProxyUrl());
+                URL url = new URL(getUrl());
                 URLConnection con;
                 if (jda.getGlobalProxy() == null)
                 {

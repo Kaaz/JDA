@@ -438,6 +438,12 @@ public class MessageImpl implements Message
     {
         return editMessage(new MessageBuilder().append(newContent).build());
     }
+    
+    @Override
+    public RestAction<Message> editMessage(MessageEmbed newContent)
+    {
+        return editMessage(new MessageBuilder().setEmbed(newContent).build()); 
+    }
 
     @Override
     public RestAction<Message> editMessage(Message newContent)
@@ -446,13 +452,6 @@ public class MessageImpl implements Message
             throw new IllegalStateException("Attempted to update message that was not sent by this account. You cannot modify other User's messages!");
 
         return getChannel().editMessageById(getId(), newContent);
-    }
-
-    @Override
-    @Deprecated
-    public RestAction<Void> deleteMessage()
-    {
-        return delete();
     }
 
     @Override

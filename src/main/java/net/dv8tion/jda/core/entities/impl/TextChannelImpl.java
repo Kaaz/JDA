@@ -28,6 +28,7 @@ import net.dv8tion.jda.core.requests.Response;
 import net.dv8tion.jda.core.requests.RestAction;
 import net.dv8tion.jda.core.requests.Route;
 import net.dv8tion.jda.core.requests.restaction.InviteAction;
+import net.dv8tion.jda.core.requests.restaction.PermissionOverrideAction;
 import net.dv8tion.jda.core.utils.MiscUtil;
 import org.apache.http.util.Args;
 import org.json.JSONArray;
@@ -213,9 +214,8 @@ public class TextChannelImpl implements TextChannel
     @Override
     public List<Member> getMembers()
     {
-        return Collections.unmodifiableList(
-        ((GuildImpl) getGuild()).getMembersMap().values().stream()
-                .filter(m -> m.getPermissions(this).contains(Permission.MESSAGE_READ))
+        return Collections.unmodifiableList(guild.getMembersMap().values().stream()
+                .filter(m -> m.hasPermission(this, Permission.MESSAGE_READ))
                 .collect(Collectors.toList()));
     }
 
@@ -297,7 +297,7 @@ public class TextChannelImpl implements TextChannel
     @Override
     public RestAction<Void> deleteMessageById(String messageId)
     {
-        checkNull(messageId, "messageId");
+        Args.notEmpty(messageId, "messageId");
         checkPermission(Permission.MESSAGE_READ);
 
         //Call MessageChannel's default method
@@ -347,6 +347,7 @@ public class TextChannelImpl implements TextChannel
     public RestAction<Void> addReactionById(String messageId, String unicode)
     {
         checkPermission(Permission.MESSAGE_ADD_REACTION);
+        checkPermission(Permission.MESSAGE_HISTORY);
 
         //Call MessageChannel's default method
         return TextChannel.super.addReactionById(messageId, unicode);
@@ -356,6 +357,7 @@ public class TextChannelImpl implements TextChannel
     public RestAction<Void> addReactionById(String messageId, Emote emote)
     {
         checkPermission(Permission.MESSAGE_ADD_REACTION);
+        checkPermission(Permission.MESSAGE_HISTORY);
 
         //Call MessageChannel's default method
         return TextChannel.super.addReactionById(messageId, emote);
@@ -446,7 +448,22 @@ public class TextChannelImpl implements TextChannel
     }
 
     @Override
-    public RestAction<PermissionOverride> createPermissionOverride(Member member)
+    public RestAction<Message> editMessageById(String id, Message newContent)
+    {
+        Args.notNull(newContent, "Message");
+
+        //checkVerification(); no verification needed to edit a message
+        checkPermission(Permission.MESSAGE_READ);
+        checkPermission(Permission.MESSAGE_WRITE);
+        if (newContent.getRawContent().isEmpty() && !newContent.getEmbeds().isEmpty())
+            checkPermission(Permission.MESSAGE_EMBED_LINKS);
+
+        //Call MessageChannel's default
+        return TextChannel.super.editMessageById(id, newContent);
+    }
+
+    @Override
+    public PermissionOverrideAction createPermissionOverride(Member member)
     {
         checkPermission(Permission.MANAGE_PERMISSIONS);
         Args.notNull(member, "member");
@@ -455,34 +472,12 @@ public class TextChannelImpl implements TextChannel
         if (getMemberOverrideMap().containsKey(member))
             throw new IllegalStateException("Provided member already has a PermissionOverride in this channel!");
 
-        final PermissionOverride override = new PermissionOverrideImpl(this, member, null);
-
-        JSONObject body = new JSONObject()
-                .put("id", member.getUser().getId())
-                .put("type", "member")
-                .put("allow", 0)
-                .put("deny", 0);
-
         Route.CompiledRoute route = Route.Channels.CREATE_PERM_OVERRIDE.compile(id, member.getUser().getId());
-        return new RestAction<PermissionOverride>(getJDA(), route, body)
-        {
-            @Override
-            protected void handleResponse(Response response, Request request)
-            {
-                if (!response.isOk())
-                {
-                    request.onFailure(response);
-                    return;
-                }
-
-                getMemberOverrideMap().put(member, override);
-                request.onSuccess(override);
-            }
-        };
+        return new PermissionOverrideAction(getJDA(), route, this, member);
     }
 
     @Override
-    public RestAction<PermissionOverride> createPermissionOverride(Role role)
+    public PermissionOverrideAction createPermissionOverride(Role role)
     {
         checkPermission(Permission.MANAGE_PERMISSIONS);
         Args.notNull(role, "role");
@@ -491,30 +486,8 @@ public class TextChannelImpl implements TextChannel
         if (getRoleOverrideMap().containsKey(role))
             throw new IllegalStateException("Provided role already has a PermissionOverride in this channel!");
 
-        final PermissionOverride override = new PermissionOverrideImpl(this, null, role);
-
-        JSONObject body = new JSONObject()
-                .put("id", role.getId())
-                .put("type", "role")
-                .put("allow", 0)
-                .put("deny", 0);
-
         Route.CompiledRoute route = Route.Channels.CREATE_PERM_OVERRIDE.compile(id, role.getId());
-        return new RestAction<PermissionOverride>(getJDA(), route, body)
-        {
-            @Override
-            protected void handleResponse(Response response, Request request)
-            {
-                if (!response.isOk())
-                {
-                    request.onFailure(response);
-                    return;
-                }
-
-                getRoleOverrideMap().put(role, override);
-                request.onSuccess(override);
-            }
-        };
+        return new PermissionOverrideAction(getJDA(), route, this, role);
     }
 
     @Override
@@ -609,12 +582,6 @@ public class TextChannelImpl implements TextChannel
             else
                 throw new PermissionException(permission);
         }
-    }
-
-    private void checkNull(Object obj, String name)
-    {
-        if (obj == null)
-            throw new NullPointerException("Provided " + name + " was null!");
     }
 
     @Override
